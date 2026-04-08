@@ -1,0 +1,140 @@
+# Kitchen Prep Manager — Setup Guide
+
+This guide will get your prep tool live on the web in about 20 minutes.
+No technical experience required. Follow each step in order.
+
+---
+
+## What you're setting up
+
+- **Supabase** — a free database that stores all your prep data in the cloud
+- **Netlify** — a free website host that puts your app on the internet
+
+You'll do this process **once per restaurant** (5 times total).
+Each restaurant gets its own database and its own web address.
+
+---
+
+## PART 1 — Create a Supabase account (do this once)
+
+1. Go to **https://supabase.com**
+2. Click **Start your project**
+3. Sign up with your email or Google account
+4. You're now in the Supabase dashboard
+
+---
+
+## PART 2 — Set up a database for Restaurant #1
+
+1. In Supabase, click **New project**
+2. Fill in:
+   - **Name**: something like `prep-bellemead` (no spaces)
+   - **Database Password**: choose a strong password and save it somewhere
+   - **Region**: choose the one closest to Nashville (US East)
+3. Click **Create new project** — this takes about 1 minute
+4. Once it loads, click **SQL Editor** in the left sidebar
+5. Click **New query**
+6. Open the file **`sql/schema.sql`** (included in this folder) in any text editor
+7. Copy all the text and paste it into the SQL editor
+8. Click **Run** (the green button)
+9. You should see "Success. No rows returned" — that's correct
+
+### Get your API credentials
+
+1. In the left sidebar, click **Project Settings** (gear icon at the bottom)
+2. Click **API**
+3. You'll see two things you need — copy them somewhere:
+   - **Project URL** — looks like `https://abcdefghijk.supabase.co`
+   - **anon / public key** — a long string starting with `eyJ...`
+
+---
+
+## PART 3 — Create a Netlify account (do this once)
+
+1. Go to **https://netlify.com**
+2. Click **Sign up** — use your email or Google account
+
+---
+
+## PART 4 — Deploy the website for Restaurant #1
+
+1. In Netlify, click **Add new site** → **Deploy manually**
+2. You'll see a box that says "Drag and drop your site folder here"
+3. Drag the **entire `kitchen-prep` folder** from your computer into that box
+4. Wait about 30 seconds — Netlify will give you a URL like `https://rainbow-unicorn-123.netlify.app`
+5. You can rename it: go to **Site settings** → **Site details** → **Change site name**
+   - Example: `bellemead-prep.netlify.app`
+
+---
+
+## PART 5 — Connect the database to the website
+
+1. Open your new website URL in a browser
+2. You'll see a "Connect your database" screen
+3. Paste in:
+   - **Supabase Project URL** (from Part 2)
+   - **Supabase Anon Key** (from Part 2)
+   - **Restaurant Name** (e.g. "Belle Meade" — this shows on printed lists)
+4. Click **Connect & set up**
+5. The app will load and automatically populate all your prep items
+
+---
+
+## PART 6 — Repeat for each restaurant
+
+For each additional restaurant:
+
+1. **Supabase**: Create a new project (Part 2) — each restaurant needs its own
+2. **Netlify**: The site code is the same, so you can either:
+   - Deploy the same folder again (creates a new Netlify site), OR
+   - In your existing Netlify site, go to **Deploys** → **Deploy manually** and drag the folder again — but this overwrites the same site
+   - Easiest: create a new Netlify site for each restaurant
+3. Connect each new site to its own Supabase project (Part 5)
+
+---
+
+## Sharing the link with your managers
+
+Once deployed, just send each manager their restaurant's URL.
+They should **bookmark it** on the computer they use each morning.
+
+The data saves automatically as they type — no need to worry about losing work.
+The "Save this list" button locks in the archive record for that day.
+
+---
+
+## Making changes in the future
+
+If you want to update the tool (add features, change anything), come back to Claude,
+describe what you want changed, and you'll get an updated `index.html` file.
+
+To update a live site:
+1. Replace `index.html` in your kitchen-prep folder with the new version
+2. Go to Netlify → your site → **Deploys** → drag the folder again
+3. It updates in about 30 seconds — no downtime
+
+---
+
+## Costs
+
+- Supabase free tier: up to 500MB storage and 50,000 rows per project — more than enough
+- Netlify free tier: unlimited sites, plenty of bandwidth for internal use
+- **Total cost: $0/month** for typical kitchen prep usage
+
+If you ever grow beyond the free limits (very unlikely), Supabase Pro is $25/month per project.
+
+---
+
+## Troubleshooting
+
+**"Could not connect" on setup screen**
+→ Double-check you copied the full URL and key from Supabase, with no extra spaces
+
+**Data not saving**
+→ Check your internet connection; the app auto-saves as you type
+
+**Prep items missing after setup**
+→ Click Settings → the items should be there; if not, contact Claude for help
+
+**Need to reset and start over**
+→ In the app, go to Settings → scroll to the bottom → "Reset connection settings"

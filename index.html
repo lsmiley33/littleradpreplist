@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitchen Prep Manager</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f3;
+    --bg3: #eeede9;
+    --text: #1a1a18;
+    --text2: #5f5e5a;
+    --text3: #888780;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --info-bg: #e6f1fb;
+    --info-text: #185fa5;
+    --warn-bg: #faeeda;
+    --warn-text: #854f0b;
+    --danger-text: #a32d2d;
+    --success-text: #3b6d11;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: var(--text); background: var(--bg3); min-height: 100vh; }
+  .app { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
+  h1 { font-size: 20px; font-weight: 600; }
+
+  /* Topbar */
+  .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap; background: var(--bg); border-radius: var(--radius-lg); padding: 12px 16px; border: 0.5px solid var(--border); }
+  .topbar h1 { flex: 1; min-width: 160px; }
+  .date-select-wrap { display: flex; align-items: center; gap: 6px; }
+  .date-select-wrap label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+
+  /* Form elements */
+  select, input[type="text"], input[type="number"] {
+    background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius);
+    padding: 7px 10px; font-size: 13px; color: var(--text); font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  select:focus, input:focus { outline: none; border-color: var(--info-text); }
+  button {
+    background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius);
+    padding: 7px 14px; font-size: 13px; cursor: pointer; color: var(--text); font-family: inherit;
+    transition: background 0.12s;
+  }
+  button:hover { background: var(--bg2); }
+  button.primary { background: var(--info-bg); color: var(--info-text); border-color: #b5d4f4; font-weight: 500; }
+  button.primary:hover { background: #d0e8f8; }
+  button.danger { color: var(--danger-text); border-color: #f7c1c1; }
+  button.danger:hover { background: #fcebeb; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 2px; margin-bottom: 1.5rem; }
+  .tab { padding: 8px 18px; font-size: 13px; cursor: pointer; border-radius: var(--radius); color: var(--text2); transition: all 0.12s; }
+  .tab:hover { background: var(--bg); }
+  .tab.active { background: var(--bg); color: var(--text); font-weight: 500; box-shadow: 0 0 0 0.5px var(--border); }
+
+  /* Summary metrics */
+  .summary-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .metric { background: var(--bg); border-radius: var(--radius); padding: 14px 16px; border: 0.5px solid var(--border); }
+  .metric .label { font-size: 11px; color: var(--text2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .metric .value { font-size: 22px; font-weight: 600; }
+  .metric .value.warn { color: var(--danger-text); }
+  .metric .value.good { color: var(--success-text); }
+  .metric.input-metric .value input {
+    font-size: 22px; font-weight: 600; border: none; background: transparent;
+    padding: 0; width: 100%; color: var(--text); font-family: inherit;
+  }
+  .metric.input-metric .value input::placeholder { color: var(--text3); font-weight: 400; font-size: 18px; }
+  .metric.input-metric .value input:focus { outline: none; border-bottom: 1.5px solid var(--info-text); }
+
+  /* Section headers */
+  .section-header {
+    display: flex; align-items: center; gap: 8px; padding: 9px 14px;
+    background: var(--bg2); border-radius: var(--radius); margin: 1rem 0 2px;
+    cursor: pointer; border: 0.5px solid var(--border); user-select: none;
+  }
+  .section-header:hover { background: var(--bg3); }
+  .section-header h3 { font-size: 13px; font-weight: 600; flex: 1; letter-spacing: 0.01em; }
+  .section-time { font-size: 12px; color: var(--text2); }
+  .section-toggle { font-size: 11px; color: var(--text3); }
+
+  /* Prep table */
+  .prep-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: var(--bg); border-radius: 0 0 var(--radius) var(--radius); border: 0.5px solid var(--border); border-top: none; margin-bottom: 4px; }
+  .prep-table th { font-size: 11px; font-weight: 600; color: var(--text2); padding: 7px 10px; text-align: left; border-bottom: 0.5px solid var(--border); background: var(--bg); text-transform: uppercase; letter-spacing: 0.04em; }
+  .prep-table td { padding: 6px 8px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+  .prep-table tr:last-child td { border-bottom: none; }
+  .prep-table tr:hover td { background: var(--bg2); }
+  .prep-table input[type="number"] { width: 68px; padding: 4px 7px; }
+  .prep-table input[type="text"] { width: 100%; padding: 4px 7px; }
+  .prep-table select { width: 100%; padding: 4px 7px; }
+  .time-cell { font-size: 12px; color: var(--text2); }
+
+  /* Settings */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
+  .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 1rem; }
+  .card-sub { font-size: 13px; color: var(--text2); font-weight: 400; }
+  .list-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 0.5px solid var(--border); }
+  .list-item:last-child { border-bottom: none; }
+  .list-item span { flex: 1; font-size: 13px; }
+  .add-row { display: flex; gap: 6px; margin-top: 12px; }
+  .add-row input { flex: 1; }
+  .item-edit-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 0.5px solid var(--border); }
+
+  /* Archive */
+  .archive-entry { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 8px; cursor: pointer; background: var(--bg); }
+  .archive-entry:hover { background: var(--bg2); }
+  .archive-entry .ae-date { font-weight: 600; font-size: 14px; }
+  .archive-entry .ae-meta { font-size: 12px; color: var(--text2); margin-top: 3px; }
+  .ae-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-left: 6px; font-weight: 500; }
+  .ae-over { background: #fcebeb; color: var(--danger-text); }
+  .ae-under { background: #eaf3de; color: var(--success-text); }
+  .ae-ok { background: var(--bg2); color: var(--text2); }
+  .archive-detail { border: 0.5px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); background: var(--bg); padding: 8px; margin-bottom: 8px; display: none; }
+  .archive-detail table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .archive-detail td, .archive-detail th { padding: 5px 8px; border-bottom: 0.5px solid var(--border); text-align: left; }
+  .archive-detail tr:last-child td { border-bottom: none; }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a18; color: #fff; padding: 10px 18px; border-radius: var(--radius); font-size: 13px; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 999; }
+  #toast.show { opacity: 1; }
+
+  /* Loading overlay */
+  #loading { position: fixed; inset: 0; background: rgba(255,255,255,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 100; }
+  #loading.hidden { display: none; }
+  .spinner { width: 28px; height: 28px; border: 2.5px solid var(--border); border-top-color: var(--info-text); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading p { font-size: 13px; color: var(--text2); }
+
+  /* Config screen */
+  #configScreen { max-width: 480px; margin: 4rem auto; background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 2rem; }
+  #configScreen h2 { font-size: 18px; font-weight: 600; margin-bottom: 0.5rem; }
+  #configScreen p { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; line-height: 1.6; }
+  #configScreen label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text2); display: block; margin-bottom: 4px; }
+  #configScreen input { width: 100%; margin-bottom: 1rem; }
+  .config-help { font-size: 12px; color: var(--text3); margin-top: -8px; margin-bottom: 1rem; }
+
+  /* Print */
+  .print-header { display: none; }
+  @media print {
+    body { background: white; }
+    .no-print { display: none !important; }
+    .print-header { display: block; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1.5px solid #ccc; }
+    .print-header h2 { font-size: 22px; font-weight: 700; }
+    .print-header p { font-size: 14px; color: #444; margin-top: 4px; }
+    .print-header .print-meta { font-size: 12px; color: #666; margin-top: 8px; }
+    .tabs { display: none; }
+    .section-header { background: #f0f0ee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .prep-table th { background: #f8f8f6 !important; -webkit-print-color-adjust: exact; }
+    .prep-table input, .prep-table select { border: none; background: transparent; -webkit-appearance: none; }
+    .summary-row { break-inside: avoid; }
+    .metric { border: 1px solid #ddd; }
+    #view-archive, #view-settings { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Loading prep manager...</p>
+</div>
+
+<div id="configScreen" style="display:none">
+  <h2>Connect your database</h2>
+  <p>Enter your Supabase project details below. You only need to do this once — these are saved to this browser.</p>
+  <label>Supabase Project URL</label>
+  <input type="text" id="cfgUrl" placeholder="https://xxxxxxxxxxxx.supabase.co">
+  <div class="config-help">Found in Supabase → Project Settings → API</div>
+  <label>Supabase Anon Key</label>
+  <input type="text" id="cfgKey" placeholder="eyJhbGciOiJIUzI1NiIs...">
+  <div class="config-help">Found in Supabase → Project Settings → API → anon / public key</div>
+  <label>Restaurant Name</label>
+  <input type="text" id="cfgName" placeholder="e.g. Belle Meade Location">
+  <div class="config-help">This will appear on printed prep lists</div>
+  <button class="primary" onclick="saveConfig()" style="width:100%;padding:10px">Connect &amp; set up</button>
+  <p id="cfgError" style="color:var(--danger-text);font-size:12px;margin-top:8px;display:none"></p>
+</div>
+
+<div class="app" id="mainApp" style="display:none">
+
+  <div class="print-header">
+    <h2 id="printRestName"></h2>
+    <p id="printDateLine"></p>
+    <div class="print-meta" id="printMeta"></div>
+  </div>
+
+  <div class="topbar no-print">
+    <h1 id="appTitle">Kitchen Prep</h1>
+    <div class="date-select-wrap">
+      <label>Prep for:</label>
+      <select id="dateSelect" onchange="switchDate()"></select>
+    </div>
+    <button onclick="printView()" style="margin-left:auto">Print</button>
+    <button onclick="showTab('settings')">Settings</button>
+  </div>
+
+  <div class="tabs no-print">
+    <div class="tab active" onclick="showTab('daily')" id="tab-daily">Daily prep</div>
+    <div class="tab" onclick="showTab('archive')" id="tab-archive">Archive</div>
+    <div class="tab" onclick="showTab('settings')" id="tab-settings">Settings</div>
+  </div>
+
+  <div id="view-daily">
+    <div class="summary-row">
+      <div class="metric"><div class="label">Total items</div><div class="value" id="m-items">—</div></div>
+      <div class="metric"><div class="label">Assigned</div><div class="value" id="m-assigned">—</div></div>
+      <div class="metric"><div class="label">Est. hours</div><div class="value" id="m-hours">—</div></div>
+      <div class="metric input-metric">
+        <div class="label">Scheduled hours</div>
+        <div class="value"><input type="number" id="scheduledHoursInput" min="0" step="0.5" placeholder="Enter" onchange="saveScheduledHours(this.value)"></div>
+      </div>
+      <div class="metric"><div class="label">Over / under</div><div class="value" id="m-delta">—</div></div>
+    </div>
+    <div id="prepSections"></div>
+    <div style="margin-top:1.5rem;display:flex;gap:10px;align-items:center" class="no-print">
+      <button class="primary" id="saveBtn" onclick="saveDay()">Save this list</button>
+      <span id="saveMsg" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+  </div>
+
+  <div id="view-archive" style="display:none">
+    <div id="archiveList"></div>
+  </div>
+
+  <div id="view-settings" style="display:none">
+    <div class="settings-grid">
+      <div class="card">
+        <h3>Staff roster</h3>
+        <div id="staffList"></div>
+        <div class="add-row">
+          <input type="text" id="newStaff" placeholder="Staff name" onkeydown="if(event.key==='Enter')addStaff()">
+          <button onclick="addStaff()">Add</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Restaurant name</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Appears on printed prep lists.</p>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="restNameInput" style="flex:1" placeholder="Restaurant name">
+          <button onclick="saveRestName()">Save</button>
+        </div>
+      </div>
+      <div class="card" style="grid-column:1/-1">
+        <h3>Prep items</h3>
+        <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:12px;color:var(--text2)">Filter:</span>
+          <select id="filterSection" onchange="renderItemSettings()">
+            <option value="">All sections</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:3fr 1.5fr 80px 80px 44px;gap:4px;padding:4px 0 6px;border-bottom:0.5px solid var(--border);font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.04em">
+          <span>Item name</span><span>Section</span><span>Mins</span><span>Unit qty</span><span></span>
+        </div>
+        <div id="itemsList"></div>
+        <div style="margin-top:14px;border-top:0.5px solid var(--border);padding-top:12px">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em">Add new item</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <input type="text" id="newItemName" placeholder="Item name" style="flex:3;min-width:150px">
+            <select id="newItemSection" style="flex:1.5;min-width:130px"></select>
+            <input type="number" id="newItemTime" placeholder="Mins" style="flex:0 0 72px">
+            <input type="number" id="newItemUnit" placeholder="Unit qty" style="flex:0 0 82px">
+            <button onclick="addItem()">Add item</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:1.5rem;text-align:right">
+      <button class="danger" onclick="resetConfig()">Reset connection settings</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SECTIONS = [
+  'Breakfast prep','Baked goods breakfast','Lunch prep','Baked goods lunch',
+  'Frozen prep','Baked goods prep','Evening prep'
+];
+const DEFAULT_ITEMS = [
+  {name:'Egg Bites - Bake and Plate',section:'Breakfast prep',mins:20,unit_qty:30},
+  {name:'Egg Sandwiches - Bake, Assemble, and Plate',section:'Breakfast prep',mins:20,unit_qty:30},
+  {name:'Egg White Bites - Bake and Plate',section:'Breakfast prep',mins:20,unit_qty:30},
+  {name:'Chia Seed Pudding - Top with Blueberries',section:'Breakfast prep',mins:15,unit_qty:12},
+  {name:'Blueberry Muffin - Bake and Plate',section:'Baked goods breakfast',mins:20,unit_qty:20},
+  {name:'Coconut Pineapple Muffin - Bake and Plate',section:'Baked goods breakfast',mins:15,unit_qty:20},
+  {name:'Coffee Cake - Slice and Plate',section:'Baked goods breakfast',mins:10,unit_qty:4},
+  {name:'Lemon Poppy Bread - Glaze, Slice, and Plate',section:'Baked goods breakfast',mins:10,unit_qty:4},
+  {name:'Zucchini Bread - Slice and Plate',section:'Baked goods breakfast',mins:10,unit_qty:4},
+  {name:'Kale Chicken Caesar Wraps - Prep, Assemble, Wrap, and Plate',section:'Lunch prep',mins:45,unit_qty:2},
+  {name:'Turkey Sandwich - Assemble, Wrap, and Plate',section:'Lunch prep',mins:45,unit_qty:2},
+  {name:'Butternut Squash Sandwich - Assemble, Wrap, and Plate',section:'Lunch prep',mins:45,unit_qty:2},
+  {name:'Lemony Kale Salad - Assemble and Plate',section:'Lunch prep',mins:30,unit_qty:2},
+  {name:'Farro Salad - Assemble and Plate',section:'Lunch prep',mins:30,unit_qty:2},
+  {name:'Veggie Quesadillas - Assemble, Bake, and Plate',section:'Lunch prep',mins:45,unit_qty:2},
+  {name:'Chicken Quesadillas - Assemble, Bake, and Plate',section:'Lunch prep',mins:20,unit_qty:2},
+  {name:'Asian Chicken Salad - Assemble and Plate',section:'Lunch prep',mins:30,unit_qty:2},
+  {name:'Belle Meade Chopped Salad - Assemble and Plate',section:'Lunch prep',mins:45,unit_qty:2},
+  {name:'Crunchy Baked Chicken Tenders - Assemble, Bake, and Plate',section:'Lunch prep',mins:45,unit_qty:2},
+  {name:'Grilled Chicken w/ Arugula Pesto - Bake, Assemble, and Plate',section:'Lunch prep',mins:25,unit_qty:2},
+  {name:'Chocolate Chip Cookies - Bake and Plate',section:'Baked goods lunch',mins:10,unit_qty:2},
+  {name:'Peanut Butter Cookies - Bake and Plate',section:'Baked goods lunch',mins:10,unit_qty:2},
+  {name:'Oreos - Bake, Assemble, and Plate',section:'Baked goods lunch',mins:20,unit_qty:2},
+  {name:'Brownies - Slice and Plate',section:'Baked goods lunch',mins:10,unit_qty:2},
+  {name:'Carrot Cake - Frost, Slice, and Plate',section:'Baked goods lunch',mins:15,unit_qty:2},
+  {name:'Oatmeal Cream Pie Cookies - Assemble and Plate',section:'Baked goods lunch',mins:15,unit_qty:2},
+  {name:'Seasonal Sugar Cookies - Plate',section:'Baked goods lunch',mins:5,unit_qty:2},
+  {name:'Blondies - Slice and Plate',section:'Baked goods lunch',mins:10,unit_qty:2},
+  {name:'Rice Krispy Treat - Slice and Plate',section:'Baked goods lunch',mins:10,unit_qty:2},
+  {name:'Buckeye Brownie - Assemble, Slice, and Plate',section:'Baked goods lunch',mins:30,unit_qty:2},
+  {name:'Bolognese (Assemble and Finish)',section:'Frozen prep',mins:45,unit_qty:1},
+  {name:'Bolognese (Prep Vegetables)',section:'Frozen prep',mins:45,unit_qty:1},
+  {name:'Chicken Noodle-Less Soup (Assemble and Finish)',section:'Frozen prep',mins:60,unit_qty:1},
+  {name:'Chicken Pot Pie (Assemble and Finish)',section:'Frozen prep',mins:60,unit_qty:1},
+  {name:'Enchiladas (Assemble and Finish)',section:'Frozen prep',mins:90,unit_qty:1},
+  {name:'Lasagna (Assemble and Finish)',section:'Frozen prep',mins:90,unit_qty:1},
+  {name:'Turkey Chili (Assemble and Finish)',section:'Frozen prep',mins:60,unit_qty:1},
+  {name:'GF Brownie - Bake',section:'Baked goods prep',mins:60,unit_qty:12},
+  {name:'Blondie - Bake',section:'Baked goods prep',mins:60,unit_qty:4},
+  {name:'Coffee Cake - Bake',section:'Baked goods prep',mins:60,unit_qty:8},
+  {name:'Zucchini Bread - Bake',section:'Baked goods prep',mins:75,unit_qty:14},
+  {name:'Chocolate Chip Cookie Dough - Prep',section:'Baked goods prep',mins:35,unit_qty:2},
+  {name:'Carrot Cake - Bake',section:'Baked goods prep',mins:45,unit_qty:2},
+  {name:'Caesar Dressing - Prep',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'Arugula Pesto - Prep',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'Avocado Mash - Prep and Portion',section:'Evening prep',mins:15,unit_qty:2},
+  {name:'Chia Seed Pudding Base - Prep',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'Egg Bites Base - Prep',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'Farro - Cook and Prep',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'FroYo Base - Prep',section:'Evening prep',mins:20,unit_qty:2},
+  {name:'Hummus - Prep',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'Kale - Wash and Prep',section:'Evening prep',mins:30,unit_qty:2},
+  {name:'Kale Dressing - Prep',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'Pickled Red Onions - Prep',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'Salmon Burgers - Prep and Assembly',section:'Evening prep',mins:15,unit_qty:2},
+  {name:'Brine Chicken Breast - Prep',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'Brined Chicken Breast - Bake',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'Turkey for Sandwiches - Slice and Prep',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'Whipped Goat Cheese - Prep',section:'Evening prep',mins:10,unit_qty:2},
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let SB_URL = '', SB_KEY = '', REST_NAME = '';
+let activeDate = '';
+let items = [], staff = [], archiveDays = [];
+let todayAssignments = {}; // { itemId: {qty, assigned_to, notes} }
+let scheduledHours = null;
+let pendingSaves = {}; // debounce timers
+let collapsedSections = new Set();
+
+// ── Config ────────────────────────────────────────────────────────────────────
+function loadConfig() {
+  SB_URL = localStorage.getItem('sb_url') || '';
+  SB_KEY = localStorage.getItem('sb_key') || '';
+  REST_NAME = localStorage.getItem('rest_name') || 'Kitchen Prep';
+}
+
+function saveConfig() {
+  const url = document.getElementById('cfgUrl').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('cfgKey').value.trim();
+  const name = document.getElementById('cfgName').value.trim();
+  const errEl = document.getElementById('cfgError');
+  errEl.style.display = 'none';
+  if (!url || !key || !name) { errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return; }
+  if (!url.includes('supabase.co')) { errEl.textContent = 'URL should contain supabase.co'; errEl.style.display = 'block'; return; }
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  localStorage.setItem('rest_name', name);
+  location.reload();
+}
+
+function resetConfig() {
+  if (!confirm('This will disconnect from the database. You can reconnect anytime. Continue?')) return;
+  localStorage.removeItem('sb_url');
+  localStorage.removeItem('sb_key');
+  localStorage.removeItem('rest_name');
+  location.reload();
+}
+
+// ── Supabase API ───────────────────────────────────────────────────────────────
+async function sb(method, path, body) {
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    method,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : 'return=representation',
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function sbGet(path) { return sb('GET', path); }
+async function sbPost(path, body) { return sb('POST', path, body); }
+async function sbPatch(path, body) { return sb('PATCH', path, body); }
+async function sbDelete(path) { return sb('DELETE', path); }
+async function sbUpsert(path, body) {
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates,return=representation',
+    },
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+async function init() {
+  loadConfig();
+  if (!SB_URL || !SB_KEY) {
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('configScreen').style.display = 'block';
+    return;
+  }
+  try {
+    await loadAll();
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('appTitle').textContent = REST_NAME;
+  } catch(e) {
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('configScreen').style.display = 'block';
+    document.getElementById('cfgError').textContent = 'Could not connect: ' + e.message;
+    document.getElementById('cfgError').style.display = 'block';
+    document.getElementById('cfgUrl').value = SB_URL;
+    document.getElementById('cfgKey').value = SB_KEY;
+  }
+}
+
+async function loadAll() {
+  activeDate = isoToday();
+  // Seed items if none exist
+  const existingItems = await sbGet('prep_items?select=id&limit=1');
+  if (!existingItems || existingItems.length === 0) {
+    await seedItems();
+  }
+  await Promise.all([loadItems(), loadStaff(), loadArchiveDates()]);
+  buildDateSelect();
+  await loadDayData();
+  renderAll();
+}
+
+async function seedItems() {
+  const rows = DEFAULT_ITEMS.map((item, i) => ({ ...item, sort_order: i }));
+  await sbUpsert('prep_items', rows);
+}
+
+// ── Data loaders ───────────────────────────────────────────────────────────────
+async function loadItems() {
+  items = await sbGet('prep_items?select=*&order=sort_order.asc,created_at.asc') || [];
+}
+
+async function loadStaff() {
+  staff = await sbGet('staff?select=*&order=name.asc') || [];
+}
+
+async function loadArchiveDates() {
+  const rows = await sbGet('prep_days?select=prep_date,scheduled_hours,saved_at&order=prep_date.desc') || [];
+  archiveDays = rows;
+}
+
+async function loadDayData() {
+  const [dayRows, assignRows] = await Promise.all([
+    sbGet(`prep_days?prep_date=eq.${activeDate}&select=*`),
+    sbGet(`prep_assignments?prep_date=eq.${activeDate}&select=*`)
+  ]);
+  const day = dayRows && dayRows[0];
+  scheduledHours = day ? day.scheduled_hours : null;
+  document.getElementById('scheduledHoursInput').value = scheduledHours || '';
+  todayAssignments = {};
+  (assignRows || []).forEach(a => { todayAssignments[a.item_id] = a; });
+}
+
+// ── Date helpers ───────────────────────────────────────────────────────────────
+function isoToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+function isoTomorrow() {
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+function formatDateLabel(iso) {
+  const today = isoToday(), tomorrow = isoTomorrow();
+  const d = new Date(iso + 'T12:00:00');
+  const long = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  if (iso === today) return 'Today — ' + long;
+  if (iso === tomorrow) return 'Tomorrow — ' + long;
+  return long;
+}
+
+function buildDateSelect() {
+  const sel = document.getElementById('dateSelect');
+  const base = [isoToday(), isoTomorrow()];
+  const archived = archiveDays.map(d => d.prep_date).filter(d => !base.includes(d)).slice(0, 60);
+  const all = [...base, ...archived];
+  sel.innerHTML = all.map(iso =>
+    `<option value="${iso}" ${iso === activeDate ? 'selected' : ''}>${formatDateLabel(iso)}</option>`
+  ).join('');
+}
+
+async function switchDate() {
+  activeDate = document.getElementById('dateSelect').value;
+  showLoading('Loading...');
+  await loadDayData();
+  hideLoading();
+  renderDaily();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderDaily();
+  renderSettings();
+}
+
+function showTab(t) {
+  ['daily', 'archive', 'settings'].forEach(x => {
+    document.getElementById('view-' + x).style.display = x === t ? '' : 'none';
+    document.getElementById('tab-' + x).classList.toggle('active', x === t);
+  });
+  if (t === 'archive') renderArchive();
+  if (t === 'settings') renderSettings();
+}
+
+function calcItemMins(item, qty) {
+  if (!qty) return 0;
+  const batches = Math.ceil(qty / (item.unit_qty || 1));
+  return batches * (item.mins || 0);
+}
+
+function renderDaily() {
+  const secs = {};
+  SECTIONS.forEach(s => secs[s] = []);
+  items.forEach(item => {
+    if (!secs[item.section]) secs[item.section] = [];
+    secs[item.section].push(item);
+  });
+
+  let html = '', totalItems = 0, assignedItems = 0, totalMins = 0;
+
+  SECTIONS.forEach(sec => {
+    const secItems = secs[sec] || [];
+    if (!secItems.length) return;
+    let secMins = 0;
+    secItems.forEach(item => {
+      const a = todayAssignments[item.id] || {};
+      secMins += calcItemMins(item, parseFloat(a.qty) || 0);
+    });
+    const collapsed = collapsedSections.has(sec);
+    const secId = 'sec-' + sec.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    html += `<div class="section-header" onclick="toggleSection('${sec.replace(/'/g,"\\'")}','${secId}')">
+      <h3>${sec}</h3>
+      <span class="section-time">${secMins ? Math.round(secMins) + ' min est.' : ''}</span>
+      <span class="section-toggle">${collapsed ? '▼ show' : '▲ hide'}</span>
+    </div>
+    <div id="${secId}" style="${collapsed ? 'display:none' : ''}">
+    <table class="prep-table">
+      <colgroup><col style="width:34%"><col style="width:11%"><col style="width:18%"><col style="width:15%"><col style="width:22%"></colgroup>
+      <thead><tr><th>Item</th><th>Qty</th><th>Assigned to</th><th>Est. time</th><th>Notes</th></tr></thead>
+      <tbody>`;
+
+    secItems.forEach(item => {
+      totalItems++;
+      const a = todayAssignments[item.id] || {};
+      const qty = parseFloat(a.qty) || 0;
+      if (a.assigned_to) assignedItems++;
+      const mins = calcItemMins(item, qty);
+      totalMins += mins;
+      const staffOpts = staff.map(s =>
+        `<option value="${s.name}" ${a.assigned_to === s.name ? 'selected' : ''}>${s.name}</option>`
+      ).join('');
+      html += `<tr>
+        <td style="font-size:13px">${item.name}</td>
+        <td><input type="number" min="0" step="1" value="${a.qty || ''}" placeholder="0"
+          onchange="queueAssignment('${item.id}','qty',this.value)"></td>
+        <td><select onchange="queueAssignment('${item.id}','assigned_to',this.value)">
+          <option value="">— assign —</option>${staffOpts}</select></td>
+        <td class="time-cell">${mins ? Math.round(mins) + ' min' : '—'}</td>
+        <td><input type="text" value="${(a.notes || '').replace(/"/g, '&quot;')}" placeholder="Notes"
+          onchange="queueAssignment('${item.id}','notes',this.value)"></td>
+      </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+  });
+
+  document.getElementById('prepSections').innerHTML = html;
+  document.getElementById('m-items').textContent = totalItems;
+  document.getElementById('m-assigned').textContent = assignedItems;
+  const estHrs = totalMins / 60;
+  document.getElementById('m-hours').textContent = estHrs.toFixed(1);
+  updateDelta(estHrs);
+}
+
+function toggleSection(sec, secId) {
+  if (collapsedSections.has(sec)) collapsedSections.delete(sec);
+  else collapsedSections.add(sec);
+  renderDaily();
+}
+
+function updateDelta(estHrs) {
+  const delta = document.getElementById('m-delta');
+  if (!scheduledHours) { delta.textContent = '—'; delta.className = 'value'; return; }
+  const diff = estHrs - parseFloat(scheduledHours);
+  if (Math.abs(diff) < 0.05) { delta.textContent = 'On target'; delta.className = 'value'; }
+  else if (diff > 0) { delta.textContent = '+' + diff.toFixed(1) + ' hrs'; delta.className = 'value warn'; }
+  else { delta.textContent = Math.abs(diff).toFixed(1) + ' hrs under'; delta.className = 'value good'; }
+}
+
+// ── Assignments (debounced auto-save) ─────────────────────────────────────────
+function queueAssignment(itemId, field, value) {
+  if (!todayAssignments[itemId]) todayAssignments[itemId] = { item_id: itemId, prep_date: activeDate };
+  todayAssignments[itemId][field] = value;
+  // Update totals immediately
+  let totalMins = 0, assignedItems = 0;
+  items.forEach(item => {
+    const a = todayAssignments[item.id] || {};
+    if (a.assigned_to) assignedItems++;
+    totalMins += calcItemMins(item, parseFloat(a.qty) || 0);
+  });
+  document.getElementById('m-assigned').textContent = assignedItems;
+  const estHrs = totalMins / 60;
+  document.getElementById('m-hours').textContent = estHrs.toFixed(1);
+  updateDelta(estHrs);
+  // Debounce DB write
+  clearTimeout(pendingSaves[itemId]);
+  pendingSaves[itemId] = setTimeout(() => persistAssignment(itemId), 800);
+}
+
+async function persistAssignment(itemId) {
+  const a = todayAssignments[itemId];
+  if (!a) return;
+  try {
+    await sbUpsert('prep_assignments', {
+      prep_date: activeDate,
+      item_id: itemId,
+      qty: a.qty ? parseFloat(a.qty) : null,
+      assigned_to: a.assigned_to || null,
+      notes: a.notes || null
+    });
+  } catch(e) { toast('Auto-save failed: ' + e.message, true); }
+}
+
+async function saveScheduledHours(val) {
+  scheduledHours = val ? parseFloat(val) : null;
+  const estHrs = parseFloat(document.getElementById('m-hours').textContent) || 0;
+  updateDelta(estHrs);
+  try {
+    await sbUpsert('prep_days', { prep_date: activeDate, scheduled_hours: scheduledHours });
+  } catch(e) { toast('Could not save scheduled hours', true); }
+}
+
+async function saveDay() {
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  // Flush any pending debounced saves first
+  await Promise.all(Object.keys(pendingSaves).map(id => {
+    clearTimeout(pendingSaves[id]);
+    return persistAssignment(id);
+  }));
+  pendingSaves = {};
+  try {
+    await sbUpsert('prep_days', {
+      prep_date: activeDate,
+      scheduled_hours: scheduledHours,
+      saved_at: new Date().toISOString()
+    });
+    await loadArchiveDates();
+    buildDateSelect();
+    toast('List saved successfully');
+    document.getElementById('saveMsg').textContent = 'Saved at ' + new Date().toLocaleTimeString();
+    setTimeout(() => document.getElementById('saveMsg').textContent = '', 4000);
+  } catch(e) { toast('Save failed: ' + e.message, true); }
+  btn.disabled = false;
+}
+
+// ── Archive ────────────────────────────────────────────────────────────────────
+async function renderArchive() {
+  const saved = archiveDays.filter(d => d.saved_at);
+  if (!saved.length) {
+    document.getElementById('archiveList').innerHTML = '<p style="color:var(--text2);font-size:13px">No saved lists yet. Use "Save this list" on the daily prep tab.</p>';
+    return;
+  }
+  document.getElementById('archiveList').innerHTML = saved.map(day => {
+    const est = '—';
+    const sched = day.scheduled_hours;
+    const d = new Date(day.prep_date + 'T12:00:00');
+    const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    return `<div class="archive-entry" onclick="loadArchiveDetail('${day.prep_date}')">
+      <div class="ae-date">${label}</div>
+      <div class="ae-meta">Saved list${sched ? ' · ' + sched + ' hrs scheduled' : ''}</div>
+    </div>
+    <div id="ad-${day.prep_date}" class="archive-detail"></div>`;
+  }).join('');
+}
+
+async function loadArchiveDetail(date) {
+  const el = document.getElementById('ad-' + date);
+  if (el.style.display === 'block') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = '<p style="font-size:12px;color:var(--text2);padding:8px">Loading...</p>';
+  try {
+    const [assignRows, dayRows] = await Promise.all([
+      sbGet(`prep_assignments?prep_date=eq.${date}&select=*`),
+      sbGet(`prep_days?prep_date=eq.${date}&select=*`)
+    ]);
+    const aMap = {};
+    (assignRows || []).forEach(a => aMap[a.item_id] = a);
+    const day = dayRows && dayRows[0];
+    let totalMins = 0, filled = 0;
+    items.forEach(item => {
+      const a = aMap[item.id] || {};
+      if (a.assigned_to) filled++;
+      totalMins += calcItemMins(item, parseFloat(a.qty) || 0);
+    });
+    const estHrs = (totalMins / 60).toFixed(1);
+    const sched = day && day.scheduled_hours;
+    let deltaStr = '';
+    if (sched) {
+      const diff = parseFloat(estHrs) - sched;
+      if (Math.abs(diff) < 0.05) deltaStr = '<span class="ae-badge ae-ok">On target</span>';
+      else if (diff > 0) deltaStr = `<span class="ae-badge ae-over">+${diff.toFixed(1)} hrs over</span>`;
+      else deltaStr = `<span class="ae-badge ae-under">${Math.abs(diff).toFixed(1)} hrs under</span>`;
+    }
+    let html = `<div style="display:flex;gap:16px;font-size:12px;color:var(--text2);padding:8px 8px 4px;flex-wrap:wrap">
+      <span>${filled}/${items.length} items assigned</span>
+      <span>${estHrs} hrs estimated</span>
+      ${sched ? `<span>${sched} hrs scheduled</span>` : ''}
+      ${deltaStr}
+    </div>
+    <table><thead><tr><th>Item</th><th>Qty</th><th>Assigned to</th><th>Est. time</th><th>Notes</th></tr></thead><tbody>`;
+    items.forEach(item => {
+      const a = aMap[item.id] || {};
+      const mins = calcItemMins(item, parseFloat(a.qty) || 0);
+      html += `<tr><td>${item.name}</td><td>${a.qty || '—'}</td><td>${a.assigned_to || '—'}</td><td>${mins ? Math.round(mins) + ' min' : '—'}</td><td>${a.notes || ''}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = '<p style="color:var(--danger-text);font-size:12px;padding:8px">Error loading: ' + e.message + '</p>'; }
+}
+
+// ── Settings ───────────────────────────────────────────────────────────────────
+function renderSettings() {
+  document.getElementById('restNameInput').value = REST_NAME;
+  document.getElementById('staffList').innerHTML = staff.length
+    ? staff.map(s => `<div class="list-item"><span>${s.name}</span><button class="danger" onclick="removeStaff('${s.id}')">Remove</button></div>`).join('')
+    : '<p style="font-size:12px;color:var(--text2)">No staff added yet.</p>';
+
+  document.getElementById('filterSection').innerHTML =
+    '<option value="">All sections</option>' + SECTIONS.map(s => `<option value="${s}">${s}</option>`).join('');
+  document.getElementById('newItemSection').innerHTML =
+    SECTIONS.map(s => `<option value="${s}">${s}</option>`).join('');
+  renderItemSettings();
+}
+
+function renderItemSettings() {
+  const filter = document.getElementById('filterSection').value;
+  const filtered = filter ? items.filter(i => i.section === filter) : items;
+  document.getElementById('itemsList').innerHTML = filtered.length
+    ? filtered.map(item => `<div class="item-edit-row">
+        <input type="text" value="${item.name.replace(/"/g,'&quot;')}" onchange="updateItem('${item.id}','name',this.value)" style="flex:3;min-width:0">
+        <select onchange="updateItem('${item.id}','section',this.value)" style="flex:1.5;min-width:0">
+          ${SECTIONS.map(s => `<option value="${s}" ${s === item.section ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+        <input type="number" value="${item.mins}" onchange="updateItem('${item.id}','mins',this.value)" style="flex:0 0 72px">
+        <input type="number" value="${item.unit_qty}" onchange="updateItem('${item.id}','unit_qty',this.value)" style="flex:0 0 72px">
+        <button class="danger" onclick="removeItem('${item.id}')">✕</button>
+      </div>`).join('')
+    : '<p style="font-size:12px;color:var(--text2);padding:8px 0">No items.</p>';
+}
+
+async function saveRestName() {
+  const name = document.getElementById('restNameInput').value.trim();
+  if (!name) return;
+  REST_NAME = name;
+  localStorage.setItem('rest_name', name);
+  document.getElementById('appTitle').textContent = name;
+  toast('Restaurant name saved');
+}
+
+async function addStaff() {
+  const name = document.getElementById('newStaff').value.trim();
+  if (!name) return;
+  try {
+    const rows = await sbPost('staff', { name });
+    staff.push(rows[0]);
+    staff.sort((a,b) => a.name.localeCompare(b.name));
+    document.getElementById('newStaff').value = '';
+    renderSettings();
+    renderDaily();
+  } catch(e) { toast('Could not add staff: ' + e.message, true); }
+}
+
+async function removeStaff(id) {
+  if (!confirm('Remove this staff member?')) return;
+  try {
+    await sbDelete(`staff?id=eq.${id}`);
+    staff = staff.filter(s => s.id !== id);
+    renderSettings();
+    renderDaily();
+  } catch(e) { toast('Could not remove staff', true); }
+}
+
+async function updateItem(id, field, val) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item[field] = (field === 'mins' || field === 'unit_qty') ? parseFloat(val) || 0 : val;
+  clearTimeout(item._saveTimer);
+  item._saveTimer = setTimeout(async () => {
+    try { await sbPatch(`prep_items?id=eq.${id}`, { [field]: item[field] }); }
+    catch(e) { toast('Could not save item change', true); }
+  }, 800);
+}
+
+async function addItem() {
+  const name = document.getElementById('newItemName').value.trim();
+  const section = document.getElementById('newItemSection').value;
+  const mins = parseFloat(document.getElementById('newItemTime').value) || 10;
+  const unit_qty = parseFloat(document.getElementById('newItemUnit').value) || 1;
+  if (!name) return;
+  try {
+    const rows = await sbPost('prep_items', { name, section, mins, unit_qty, sort_order: items.length });
+    items.push(rows[0]);
+    document.getElementById('newItemName').value = '';
+    document.getElementById('newItemTime').value = '';
+    document.getElementById('newItemUnit').value = '';
+    renderItemSettings();
+    renderDaily();
+    toast('Item added');
+  } catch(e) { toast('Could not add item: ' + e.message, true); }
+}
+
+async function removeItem(id) {
+  if (!confirm('Remove this prep item? This will also remove all historical assignments for it.')) return;
+  try {
+    await sbDelete(`prep_items?id=eq.${id}`);
+    items = items.filter(i => i.id !== id);
+    renderItemSettings();
+    renderDaily();
+  } catch(e) { toast('Could not remove item', true); }
+}
+
+// ── Print ──────────────────────────────────────────────────────────────────────
+function printView() {
+  document.getElementById('printRestName').textContent = REST_NAME;
+  document.getElementById('printDateLine').textContent = 'Prep list for: ' + formatDateLabel(activeDate);
+  const sched = scheduledHours ? scheduledHours + ' hrs scheduled' : '';
+  const est = document.getElementById('m-hours').textContent + ' hrs estimated';
+  document.getElementById('printMeta').textContent = [est, sched].filter(Boolean).join(' · ');
+  window.print();
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────────────
+function toast(msg, isErr) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = isErr ? '#a32d2d' : '#1a1a18';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+let loadingMsg = null;
+function showLoading(msg) {
+  document.getElementById('loading').classList.remove('hidden');
+  document.querySelector('#loading p').textContent = msg || 'Loading...';
+}
+function hideLoading() {
+  document.getElementById('loading').classList.add('hidden');
+}
+
+init();
+</script>
+</body>
+</html>
