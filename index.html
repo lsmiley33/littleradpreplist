@@ -802,6 +802,7 @@ function renderItemSettings() {
         </select>
         <input type="number" value="${item.mins}" onchange="updateItem('${item.id}','mins',this.value)" style="flex:0 0 72px">
         <input type="number" value="${item.unit_qty}" onchange="updateItem('${item.id}','unit_qty',this.value)" style="flex:0 0 72px">
+        <input type="number" value="${item.step_qty ?? ''}" placeholder="—" onchange="updateItem('${item.id}','step_qty',this.value)" style="flex:0 0 72px" title="Step qty: qty threshold that adds 30% to time">
         <button class="danger" onclick="removeItem('${item.id}')">✕</button>
       </div>`).join('')
     : '<p style="font-size:12px;color:var(--text2);padding:8px 0">No items.</p>';
