@@ -573,8 +573,8 @@ function renderDaily() {
     </div>
     <div id="${secId}" style="${collapsed ? 'display:none' : ''}">
     <table class="prep-table">
-      <colgroup><col style="width:34%"><col style="width:11%"><col style="width:18%"><col style="width:15%"><col style="width:22%"></colgroup>
-      <thead><tr><th>Item</th><th>Qty</th><th>Assigned to</th><th>Est. time</th><th>Notes</th></tr></thead>
+      <colgroup><col style="width:30%"><col style="width:9%"><col style="width:16%"><col style="width:11%"><col style="width:14%"><col style="width:20%"></colgroup>
+      <thead><tr><th>Item</th><th>Qty</th><th>Assigned to</th><th>Est. time</th><th>Initials</th><th>Notes</th></tr></thead>
       <tbody>`;
 
     secItems.forEach(item => {
@@ -594,6 +594,8 @@ function renderDaily() {
         <td><select onchange="queueAssignment('${item.id}','assigned_to',this.value)">
           <option value="">— assign —</option>${staffOpts}</select></td>
         <td class="time-cell">${mins ? Math.round(mins) + ' min' : '—'}</td>
+        <td><input type="text" value="${(a.initials || '').replace(/"/g, '&quot;')}" placeholder="Initials"
+          style="width:80px" onchange="queueAssignment('${item.id}','initials',this.value)"></td>
         <td><input type="text" value="${(a.notes || '').replace(/"/g, '&quot;')}" placeholder="Notes"
           onchange="queueAssignment('${item.id}','notes',this.value)"></td>
       </tr>`;
@@ -654,6 +656,7 @@ async function persistAssignment(itemId) {
       item_id: itemId,
       qty: a.qty ? parseFloat(a.qty) : null,
       assigned_to: a.assigned_to || null,
+      initials: a.initials || null,
       notes: a.notes || null
     });
   } catch(e) { toast('Auto-save failed: ' + e.message, true); }
@@ -746,11 +749,11 @@ async function loadArchiveDetail(date) {
       ${sched ? `<span>${sched} hrs scheduled</span>` : ''}
       ${deltaStr}
     </div>
-    <table><thead><tr><th>Item</th><th>Qty</th><th>Assigned to</th><th>Est. time</th><th>Notes</th></tr></thead><tbody>`;
+    <table><thead><tr><th>Item</th><th>Qty</th><th>Assigned to</th><th>Est. time</th><th>Initials</th><th>Notes</th></tr></thead><tbody>`;
     items.forEach(item => {
       const a = aMap[item.id] || {};
       const mins = calcItemMins(item, parseFloat(a.qty) || 0);
-      html += `<tr><td>${item.name}</td><td>${a.qty || '—'}</td><td>${a.assigned_to || '—'}</td><td>${mins ? Math.round(mins) + ' min' : '—'}</td><td>${a.notes || ''}</td></tr>`;
+      html += `<tr><td>${item.name}</td><td>${a.qty || '—'}</td><td>${a.assigned_to || '—'}</td><td>${mins ? Math.round(mins) + ' min' : '—'}</td><td>${a.initials || '—'}</td><td>${a.notes || ''}</td></tr>`;
     });
     html += '</tbody></table>';
     el.innerHTML = html;
