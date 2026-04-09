@@ -543,11 +543,14 @@ function showTab(t) {
 
 function calcItemMins(item, qty) {
   if (!qty) return 0;
-  const batches = Math.ceil(qty / (item.unit_qty || 1));
-  const base = batches * (item.mins || 0);
   const stepQty = item.step_qty;
-  if (stepQty && qty > stepQty) return Math.round(base * 1.3);
-  return base;
+  if (stepQty) {
+    // Step function: base time if at or under threshold, +30% if over
+    return qty > stepQty ? Math.round((item.mins || 0) * 1.3) : (item.mins || 0);
+  }
+  // No step qty set: scale by batches
+  const batches = Math.ceil(qty / (item.unit_qty || 1));
+  return batches * (item.mins || 0);
 }
 
 function renderDaily() {
