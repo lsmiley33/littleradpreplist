@@ -292,7 +292,7 @@
 <script>
 const SECTIONS = [
   'Breakfast prep','Baked goods breakfast','Lunch prep','Baked goods lunch',
-  'Frozen prep','Baked goods prep','Evening prep'
+  'Frozen prep','Baked goods prep','Evening prep','Catering'
 ];
 const DEFAULT_ITEMS = [
   {name:'Egg Bites - Bake and Plate',section:'Breakfast prep',mins:20,unit_qty:30},
@@ -354,6 +354,58 @@ const DEFAULT_ITEMS = [
   {name:'Brined Chicken Breast - Bake',section:'Evening prep',mins:10,unit_qty:2},
   {name:'Turkey for Sandwiches - Slice and Prep',section:'Evening prep',mins:10,unit_qty:2},
   {name:'Whipped Goat Cheese - Prep',section:'Evening prep',mins:10,unit_qty:2},
+  {name:'Breakfast Sandwich Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Egg Bites Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Banana Bread Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Coffee Cake Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Zucchini Bread Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Muffin Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Pastry Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Full Sandwich (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Half Sandwich (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Chopped Salad (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Asian Chicken (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Pigs in a Blanket',section:'Catering',mins:45,unit_qty:1},
+  {name:'Herby Chicken Skewers',section:'Catering',mins:45,unit_qty:1},
+  {name:'Hummus (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Red Pepper and Walnut Dip (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'White Bean Puree (Assemble)',section:'Catering',mins:10,unit_qty:1},
+  {name:'Toasted Crostini (Assemble)',section:'Catering',mins:10,unit_qty:1},
+  {name:'Crudite Platter (Assemble)',section:'Catering',mins:10,unit_qty:1},
+  {name:'Cheese Board (Assemble)',section:'Catering',mins:10,unit_qty:1},
+  {name:'Mini Cheese Board (Assemble)',section:'Catering',mins:10,unit_qty:1},
+  {name:'Chicken Salad Sliders',section:'Catering',mins:45,unit_qty:1},
+  {name:'Roast Beef Sliders',section:'Catering',mins:45,unit_qty:1},
+  {name:'Turkey (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Roasted Butternut Squash Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Tofu Bahn Mi Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Roasted Vegetable and Mozz Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Tofu Bahn Mi Platter',section:'Catering',mins:35,unit_qty:1},
+  {name:'Caesar Salad (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Lemony Kale (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Butternut Squash and Farro (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Roasted Cauliflower (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Beet, Fennel and Orange Salad (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Quinoa Salad (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Roasted Salmon with Herbs (Entrée Platter)',section:'Catering',mins:45,unit_qty:1},
+  {name:'Chicken with Pesto (Entrée Platter - Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Chicken Sausage Lasagna (Entrée Platter - Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Chicken and Spinach Enchiladas (Entrée Platter - Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Chicken Pot Pie (Entrée Platter - Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Herby Chicken Skewers (Entrée Platter)',section:'Catering',mins:45,unit_qty:1},
+  {name:'Tenders (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Mac n Cheese',section:'Catering',mins:45,unit_qty:1},
+  {name:'Chocolate Cookie Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Two Bite Blondie Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Two Bite Brownie Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Cookie / Brownie / Blondie Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
+  {name:'Birthday Cake',section:'Catering',mins:60,unit_qty:1},
+  {name:'Orange Olive Oil Cake',section:'Catering',mins:60,unit_qty:1},
+  {name:'Chocolate Cake',section:'Catering',mins:60,unit_qty:1},
+  {name:'Cookie Cake',section:'Catering',mins:60,unit_qty:1},
+  {name:'Iced Coffee',section:'Catering',mins:5,unit_qty:1},
+  {name:'Lemonade',section:'Catering',mins:5,unit_qty:1},
+  {name:'Hot Coffee',section:'Catering',mins:5,unit_qty:1},
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -609,9 +661,9 @@ function renderDaily() {
         <td><select onchange="queueAssignment('${item.id}','assigned_to',this.value)">
           <option value="">— assign —</option>${staffOpts}</select></td>
         <td class="time-cell">${mins ? Math.round(mins) + ' min' : '—'}</td>
-        <td><input type="text" value="${(a.initials || '').replace(/"/g, '&quot;')}" placeholder="Initials"
+        <td><input type="text" value="${(a.initials || '').replace(/"/g, '&quot;')}"
           style="width:80px" onchange="queueAssignment('${item.id}','initials',this.value)"></td>
-        <td><input type="text" value="${(a.notes || '').replace(/"/g, '&quot;')}" placeholder="Notes"
+        <td><input type="text" value="${(a.notes || '').replace(/"/g, '&quot;')}"
           onchange="queueAssignment('${item.id}','notes',this.value)"></td>
       </tr>`;
     });
@@ -793,8 +845,10 @@ function renderSettings() {
 function renderItemSettings() {
   const filter = document.getElementById('filterSection').value;
   const filtered = filter ? items.filter(i => i.section === filter) : items;
-  document.getElementById('itemsList').innerHTML = filtered.length
-    ? filtered.map(item => `<div class="item-edit-row">
+  const container = document.getElementById('itemsList');
+  container.innerHTML = filtered.length
+    ? filtered.map(item => `<div class="item-edit-row" draggable="true" data-id="${item.id}" style="cursor:grab">
+        <span style="color:var(--text3);font-size:14px;padding:0 4px;cursor:grab;flex-shrink:0">⠿</span>
         <input type="text" value="${item.name.replace(/"/g,'&quot;')}" onchange="updateItem('${item.id}','name',this.value)" style="flex:3;min-width:0">
         <select onchange="updateItem('${item.id}','section',this.value)" style="flex:1.5;min-width:0">
           ${SECTIONS.map(s => `<option value="${s}" ${s === item.section ? 'selected' : ''}>${s}</option>`).join('')}
@@ -804,6 +858,52 @@ function renderItemSettings() {
         <button class="danger" onclick="removeItem('${item.id}')">✕</button>
       </div>`).join('')
     : '<p style="font-size:12px;color:var(--text2);padding:8px 0">No items.</p>';
+  initDragSort(container, filtered);
+}
+
+let dragSrc = null;
+function initDragSort(container, filtered) {
+  container.querySelectorAll('.item-edit-row').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragSrc = row;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => row.style.opacity = '0.4', 0);
+    });
+    row.addEventListener('dragend', () => { row.style.opacity = ''; });
+    row.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+    row.addEventListener('dragenter', e => { e.preventDefault(); row.style.background = 'var(--info-bg)'; });
+    row.addEventListener('dragleave', () => { row.style.background = ''; });
+    row.addEventListener('drop', async e => {
+      e.preventDefault();
+      row.style.background = '';
+      if (dragSrc === row) return;
+      const allRows = [...container.querySelectorAll('.item-edit-row')];
+      const srcIdx = allRows.indexOf(dragSrc);
+      const dstIdx = allRows.indexOf(row);
+      if (srcIdx < dstIdx) row.after(dragSrc); else row.before(dragSrc);
+      // Reorder items array and save sort_order
+      const filter = document.getElementById('filterSection').value;
+      const newOrder = [...container.querySelectorAll('.item-edit-row')].map(r => r.dataset.id);
+      if (filter) {
+        // Only reorder within filtered subset; preserve positions of other items
+        const filteredIds = new Set(filtered.map(i => i.id));
+        let fi = 0;
+        items.forEach((item, idx) => {
+          if (filteredIds.has(item.id)) { items[idx] = items.find(i => i.id === newOrder[fi++]); }
+        });
+      } else {
+        const idMap = Object.fromEntries(items.map(i => [i.id, i]));
+        newOrder.forEach((id, idx) => { items[idx] = idMap[id]; });
+      }
+      items.forEach((item, idx) => item.sort_order = idx);
+      toast('Saving order...');
+      try {
+        await Promise.all(items.map(item => sbPatch(`prep_items?id=eq.${item.id}`, { sort_order: item.sort_order })));
+        toast('Order saved');
+        renderDaily();
+      } catch(e) { toast('Could not save order', true); }
+    });
+  });
 }
 
 async function saveRestName() {
