@@ -1446,15 +1446,15 @@ async function loadDayData(date) {
     assignments[a.item_id] = { qty: a.qty, assigned_to: a.assigned_to, initials: a.initials, notes: a.notes };
   });
 
-  // Load catering overrides
-  const cr = await supa('catering_prep_assignments?prep_date=eq.'+date+'&select=pseudo_id,qty,assigned_to,initials,notes');
-  const cd = await cr.json();
+  // Load catering overrides from settings table (key: catering_asgn_DATE)
   cateringAssignments = {};
-  if (Array.isArray(cd)) {
-    cd.forEach(a => {
-      cateringAssignments[a.pseudo_id] = { qty: a.qty, assigned_to: a.assigned_to, initials: a.initials, notes: a.notes };
-    });
-  }
+  try {
+    const cr = await supa('settings?key=eq.catering_asgn_'+date+'&select=value');
+    const cd = await cr.json();
+    if (Array.isArray(cd) && cd.length > 0) {
+      cateringAssignments = JSON.parse(cd[0].value) || {};
+    }
+  } catch(e) { cateringAssignments = {}; }
 
   await loadFixedBoh();
 
@@ -1987,32 +1987,17 @@ async function upsertAssignments() {
     }
   }
 
-  // Save catering overrides — save every entry that exists in cateringAssignments
-  const catRecords = [];
-  Object.entries(cateringAssignments).forEach(([pseudoId, asgn]) => {
-    catRecords.push({
-      prep_date: currentDate,
-      pseudo_id: pseudoId,
-      qty: asgn.qty != null ? asgn.qty : null,
-      assigned_to: asgn.assigned_to || null,
-      initials: asgn.initials || null,
-      notes: asgn.notes || null,
+  // Save catering overrides into settings table as JSON
+  if (Object.keys(cateringAssignments).length > 0) {
+    const catSaveResp = await supa('settings', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ key: 'catering_asgn_' + currentDate, value: JSON.stringify(cateringAssignments) })
     });
-  });
-
-  const catDel = await supa('catering_prep_assignments?prep_date=eq.'+currentDate, { method:'DELETE' });
-  if (!catDel.ok && catDel.status !== 404) {
-    console.error('Catering assignments delete failed:', catDel.status, await catDel.text());
-  }
-  if (catRecords.length > 0) {
-    const catIns = await supa('catering_prep_assignments', {
-      method: 'POST', prefer: 'return=minimal',
-      body: JSON.stringify(catRecords)
-    });
-    if (!catIns.ok) {
-      const err = await catIns.text();
-      console.error('Catering assignments insert failed:', catIns.status, err);
-      throw new Error('Catering save failed: ' + catIns.status + ' ' + err);
+    if (!catSaveResp.ok) {
+      const err = await catSaveResp.text();
+      throw new Error('Catering save failed: ' + catSaveResp.status + ' ' + err);
     }
   }
 }
