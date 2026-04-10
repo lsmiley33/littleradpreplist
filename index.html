@@ -516,7 +516,6 @@ let currentSectionFilter = 'all';
 let cateringItems = [];   // from DB: catering_items table
 let cateringOrders = [];  // from DB: catering_orders table
 let pendingOrderItems = {}; // itemId -> qty while building a new order
-let cateringAssignments = {}; // pseudoId -> {qty, assigned_to, initials, notes} — overrides saved to DB
 
 // FROZEN PREP DATA
 const FROZEN_ITEMS_BY_DAY = {
@@ -1446,15 +1445,15 @@ async function loadDayData(date) {
     assignments[a.item_id] = { qty: a.qty, assigned_to: a.assigned_to, initials: a.initials, notes: a.notes };
   });
 
-  // Load catering overrides from settings table (key: catering_asgn_DATE)
-  cateringAssignments = {};
+  // Load string-keyed overrides (frozen + catering) from settings JSON blob
   try {
-    const cr = await supa('settings?key=eq.catering_asgn_'+date+'&select=value');
-    const cd = await cr.json();
-    if (Array.isArray(cd) && cd.length > 0) {
-      cateringAssignments = JSON.parse(cd[0].value) || {};
+    const sr = await supa('settings?key=eq.string_asgn_'+date+'&select=value');
+    const sd = await sr.json();
+    if (Array.isArray(sd) && sd.length > 0) {
+      const strAsgn = JSON.parse(sd[0].value) || {};
+      Object.assign(assignments, strAsgn);
     }
-  } catch(e) { cateringAssignments = {}; }
+  } catch(e) {}
 
   await loadFixedBoh();
 
@@ -1586,7 +1585,7 @@ function renderCateringSection(container) {
     group.entries.forEach(entry => {
       const { catItem, qty, type } = entry;
       const pseudoId = `cat_${entry.orderId}_${catItem.id}_${type}`;
-      const asgn = cateringAssignments[pseudoId] || {};
+      const asgn = assignments[pseudoId] || {};
       const baseMins = type === 'prep' ? (catItem.prep_time||0) : (catItem.assemble_time||5);
       // Step function: qty > 1 → +30%
       const estMins = qty > 1 ? Math.round(baseMins * 1.3) : baseMins;
@@ -1611,8 +1610,8 @@ function renderCateringSection(container) {
       tbody.appendChild(tr);
 
       // Pre-seed catering assignment with order qty (in-memory only, saved on change)
-      if (!cateringAssignments[pseudoId]) {
-        cateringAssignments[pseudoId] = { qty: qty, assigned_to: '', initials: '', notes: '' };
+      if (!assignments[pseudoId]) {
+        assignments[pseudoId] = { qty: qty, assigned_to: '', initials: '', notes: '' };
       }
     });
 
@@ -1628,8 +1627,8 @@ function onCateringQtyChange(el) {
   const id = el.dataset.id;
   const qty = parseFloat(el.value) || 0;
   const baseMins = parseFloat(el.dataset.baseMins) || 0;
-  if (!cateringAssignments[id]) cateringAssignments[id] = {};
-  cateringAssignments[id].qty = qty > 0 ? qty : null;
+  if (!assignments[id]) assignments[id] = {};
+  assignments[id].qty = qty > 0 ? qty : null;
   el.classList.remove('catering-auto');
 
   const estMins = qty > 1 ? Math.round(baseMins * 1.3) : (qty === 1 ? baseMins : 0);
@@ -1839,7 +1838,7 @@ function updateSummary() {
   cateringForDate.forEach(entry => {
     const { catItem, qty: orderQty, type, orderId } = entry;
     const pseudoId = `cat_${orderId}_${catItem.id}_${type}`;
-    const asgn = cateringAssignments[pseudoId];
+    const asgn = assignments[pseudoId];
     const qty = asgn && asgn.qty != null ? (parseFloat(asgn.qty)||0) : orderQty;
     if (qty > 0) {
       totalItems++;
@@ -1899,26 +1898,16 @@ function onQtyChange(el) {
 
 function onAssignChange(el) {
   const id = el.dataset.id;
-  if (id.startsWith('cat_')) {
-    if (!cateringAssignments[id]) cateringAssignments[id] = {};
-    cateringAssignments[id].assigned_to = el.value;
-  } else {
-    if (!assignments[id]) assignments[id] = {};
-    assignments[id].assigned_to = el.value;
-  }
+  if (!assignments[id]) assignments[id] = {};
+  assignments[id].assigned_to = el.value;
   updateSummary();
   triggerAutoSave();
 }
 
 function onFieldChange(el, field) {
   const id = el.dataset.id;
-  if (id.startsWith('cat_')) {
-    if (!cateringAssignments[id]) cateringAssignments[id] = {};
-    cateringAssignments[id][field] = el.value;
-  } else {
-    if (!assignments[id]) assignments[id] = {};
-    assignments[id][field] = el.value;
-  }
+  if (!assignments[id]) assignments[id] = {};
+  assignments[id][field] = el.value;
   triggerAutoSave();
 }
 
@@ -1987,18 +1976,20 @@ async function upsertAssignments() {
     }
   }
 
-  // Save catering overrides into settings table as JSON
-  if (Object.keys(cateringAssignments).length > 0) {
-    const catSaveResp = await supa('settings', {
-      method: 'POST',
-      prefer: 'resolution=merge-duplicates',
-      headers: { 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify({ key: 'catering_asgn_' + currentDate, value: JSON.stringify(cateringAssignments) })
-    });
-    if (!catSaveResp.ok) {
-      const err = await catSaveResp.text();
-      throw new Error('Catering save failed: ' + catSaveResp.status + ' ' + err);
-    }
+  // Save string-keyed overrides (frozen_ and cat_ ids) to settings JSON blob
+  const strAsgn = {};
+  Object.entries(assignments).forEach(([itemId, asgn]) => {
+    if (isNaN(parseInt(itemId))) strAsgn[itemId] = asgn;
+  });
+  const strSaveResp = await supa('settings', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates',
+    headers: { 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({ key: 'string_asgn_' + currentDate, value: JSON.stringify(strAsgn) })
+  });
+  if (!strSaveResp.ok) {
+    const err = await strSaveResp.text();
+    throw new Error('String assignments save failed: ' + strSaveResp.status + ' ' + err);
   }
 }
 
