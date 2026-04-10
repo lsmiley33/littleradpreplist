@@ -457,7 +457,8 @@
     <div class="settings-card" style="grid-column:1/-1;">
       <h3>Prep Items</h3>
       <div class="section-tabs" id="settings-section-tabs"></div>
-      <div style="overflow-x:auto;">
+      <!-- Regular prep items table (hidden when Catering tab active) -->
+      <div id="prep-items-table-wrap" style="overflow-x:auto;">
         <table class="items-table">
           <thead>
             <tr>
@@ -471,24 +472,10 @@
           <tbody id="items-tbody"></tbody>
         </table>
       </div>
-      <div class="add-item-form" id="add-item-form">
-        <input type="text" id="new-item-name" placeholder="Item name" />
-        <input type="number" id="new-item-mins" placeholder="Mins" min="0" />
-        <input type="number" id="new-item-step" placeholder="Step Qty" min="0" />
-        <button class="btn-add" onclick="addItem()">+ Add Item</button>
-        <button class="btn-small" onclick="toggleAddForm()">Cancel</button>
-      </div>
-      <div style="margin-top:10px;">
-        <button class="btn-outline" onclick="toggleAddForm()">+ New Item</button>
-      </div>
-    </div>
-
-    <!-- Catering Items Settings -->
-    <div class="settings-card" style="grid-column:1/-1;">
-      <h3>🍽 Catering Menu Items</h3>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Toggle "Has Prep" to add a PREP step (day before CPD). All items always get an ASSEMBLE step on CPD. Step Qty = 1 (qty &gt; 1 adds 30% time).</p>
-      <div style="overflow-x:auto;">
-        <table class="catering-items-table" id="catering-items-table">
+      <!-- Catering items table (shown when Catering tab active) -->
+      <div id="catering-items-wrap" style="display:none;overflow-x:auto;">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Toggle "Has Prep" to add a PREP step (day before CPD). All items always get an ASSEMBLE step on CPD. Qty &gt; 1 adds 30% time.</p>
+        <table class="catering-items-table">
           <thead>
             <tr>
               <th>Item</th>
@@ -501,7 +488,19 @@
           <tbody id="catering-items-tbody"></tbody>
         </table>
       </div>
+      <div class="add-item-form" id="add-item-form">
+        <input type="text" id="new-item-name" placeholder="Item name" />
+        <input type="number" id="new-item-mins" placeholder="Mins" min="0" />
+        <input type="number" id="new-item-step" placeholder="Step Qty" min="0" />
+        <button class="btn-add" onclick="addItem()">+ Add Item</button>
+        <button class="btn-small" onclick="toggleAddForm()">Cancel</button>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="btn-outline" id="new-item-btn" onclick="toggleAddForm()">+ New Item</button>
+      </div>
     </div>
+
+    <!-- Catering Items — rendered inside the unified Prep Items card via section tabs -->
   </div>
 </div>
 
@@ -576,7 +575,7 @@ const SECTION_ORDER = [
   'Evening prep',
 ];
 // Settings prep-items section tabs (excludes Catering — handled separately)
-const SETTINGS_SECTION_ORDER = [...SECTION_ORDER];
+const SETTINGS_SECTION_ORDER = [...SECTION_ORDER, 'Catering'];
 
 function supa(path, opts={}) {
   return fetch(SUPA_URL + '/rest/v1/' + path, {
@@ -817,6 +816,16 @@ function switchSettingsSection(idx) {
 
 function renderSettingsItems(idx) {
   const section = SETTINGS_SECTION_ORDER[idx];
+  const isCatering = section === 'Catering';
+  // Toggle which table is visible
+  document.getElementById('prep-items-table-wrap').style.display = isCatering ? 'none' : '';
+  document.getElementById('catering-items-wrap').style.display = isCatering ? '' : 'none';
+  document.getElementById('add-item-form').style.display = isCatering ? 'none' : '';
+  const newItemBtn = document.getElementById('new-item-btn'); if(newItemBtn) newItemBtn.style.display = isCatering ? 'none' : '';
+  if (isCatering) {
+    renderCateringItemsSettings();
+    return;
+  }
   const items = prepItems.filter(i=>i.section===section);
   const tbody = document.getElementById('items-tbody');
   tbody.innerHTML = items.map(item=>`
@@ -1978,11 +1987,9 @@ async function upsertAssignments() {
     }
   }
 
-  // Save catering overrides
+  // Save catering overrides — save every entry that exists in cateringAssignments
   const catRecords = [];
   Object.entries(cateringAssignments).forEach(([pseudoId, asgn]) => {
-    // Only save if the manager actually changed something from the default
-    if (asgn.qty == null && !asgn.assigned_to && !asgn.initials && !asgn.notes) return;
     catRecords.push({
       prep_date: currentDate,
       pseudo_id: pseudoId,
@@ -1993,12 +2000,20 @@ async function upsertAssignments() {
     });
   });
 
-  await supa('catering_prep_assignments?prep_date=eq.'+currentDate, { method:'DELETE' });
+  const catDel = await supa('catering_prep_assignments?prep_date=eq.'+currentDate, { method:'DELETE' });
+  if (!catDel.ok && catDel.status !== 404) {
+    console.error('Catering assignments delete failed:', catDel.status, await catDel.text());
+  }
   if (catRecords.length > 0) {
-    await supa('catering_prep_assignments', {
+    const catIns = await supa('catering_prep_assignments', {
       method: 'POST', prefer: 'return=minimal',
       body: JSON.stringify(catRecords)
     });
+    if (!catIns.ok) {
+      const err = await catIns.text();
+      console.error('Catering assignments insert failed:', catIns.status, err);
+      throw new Error('Catering save failed: ' + catIns.status + ' ' + err);
+    }
   }
 }
 
