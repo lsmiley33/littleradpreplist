@@ -245,7 +245,7 @@
 <!-- HEADER -->
 <header>
   <div>
-    <div class="header-logo">🥗 Prep Manager</div>
+    <div class="header-logo"><img src="littlerad-logo.png" style="height:38px;width:auto;vertical-align:middle;" /> Prep Manager</div>
     <div class="header-rest" id="header-rest-name"></div>
   </div>
   <nav>
@@ -473,9 +473,9 @@ function supa(path, opts={}) {
 // SETUP
 // ============================================================
 function checkSetup() {
-SUPA_URL = 'https://hacviwyvywekmheqburf.supabase.co';
-SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhhY3Zpd3l2eXdla21oZXFidXJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzQ2MTQsImV4cCI6MjA5MTI1MDYxNH0.1scQl772yQtSggXsocl5ujmXSlv4rMZk6SNNqTry5RY';
-  REST_NAME = localStorage.getItem('rest_name') || 'Radish Nashville';
+  SUPA_URL = localStorage.getItem('supa_url') || '';
+  SUPA_KEY = localStorage.getItem('supa_key') || '';
+  REST_NAME = localStorage.getItem('rest_name') || 'My Restaurant';
   if (!SUPA_URL || !SUPA_KEY) {
     document.getElementById('setup-screen').classList.add('active');
     return false;
@@ -1197,7 +1197,8 @@ async function autoSave() {
     setStatus('saved', '✓ Saved');
     setTimeout(() => setStatus('', ''), 2000);
   } catch(e) {
-    setStatus('error', '⚠ Save error');
+    console.error('AutoSave error:', e);
+    setStatus('error', '⚠ Save error: ' + e.message);
   }
 }
 
@@ -1221,24 +1222,35 @@ async function upsertAssignments() {
   Object.entries(assignments).forEach(([itemId, asgn]) => {
     // Skip items with no useful data
     if (!asgn.qty && !asgn.assigned_to && !asgn.initials && !asgn.notes) return;
+    const parsedId = parseInt(itemId);
+    // Skip frozen items that don't have a real integer DB id
+    if (isNaN(parsedId)) return;
     records.push({
       prep_date: currentDate,
-      item_id: isNaN(parseInt(itemId)) ? null : parseInt(itemId),
+      item_id: parsedId,
       qty: asgn.qty || null,
       assigned_to: asgn.assigned_to || null,
       initials: asgn.initials || null,
       notes: asgn.notes || null,
     });
   });
+
+  // Always delete first, then re-insert if there are records
+  const delResp = await supa('prep_assignments?prep_date=eq.'+currentDate, { method:'DELETE' });
+  if (!delResp.ok && delResp.status !== 404) {
+    throw new Error('Delete failed: ' + delResp.status);
+  }
+
   if (records.length === 0) return;
-  // Delete existing then re-insert
-  await supa('prep_assignments?prep_date=eq.'+currentDate, { method:'DELETE' });
-  if (records.length > 0) {
-    await supa('prep_assignments', {
-      method:'POST',
-      headers:{'Prefer':'resolution=merge-duplicates'},
-      body: JSON.stringify(records)
-    });
+
+  const insResp = await supa('prep_assignments', {
+    method: 'POST',
+    prefer: 'return=minimal',
+    body: JSON.stringify(records)
+  });
+  if (!insResp.ok) {
+    const err = await insResp.text();
+    throw new Error('Insert failed: ' + insResp.status + ' ' + err);
   }
 }
 
@@ -1249,8 +1261,8 @@ async function upsertPrepDay(lock) {
     ...(lock ? { saved_at: new Date().toISOString() } : {}),
   };
   await supa('prep_days', {
-    method:'POST',
-    headers:{'Prefer':'resolution=merge-duplicates'},
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates',
     body: JSON.stringify(body)
   });
 }
