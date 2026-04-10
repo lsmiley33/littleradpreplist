@@ -473,9 +473,9 @@ function supa(path, opts={}) {
 // SETUP
 // ============================================================
 function checkSetup() {
-  SUPA_URL = localStorage.getItem('supa_url') || '';
-  SUPA_KEY = localStorage.getItem('supa_key') || '';
-  REST_NAME = localStorage.getItem('rest_name') || 'My Restaurant';
+  SUPA_URL = 'https://YOUR-PROJECT-ID.supabase.co';
+  SUPA_KEY = 'YOUR-ANON-KEY-HERE';
+  REST_NAME = localStorage.getItem('rest_name') || 'Radish Nashville';
   if (!SUPA_URL || !SUPA_KEY) {
     document.getElementById('setup-screen').classList.add('active');
     return false;
