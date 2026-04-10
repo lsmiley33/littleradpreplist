@@ -1449,11 +1449,15 @@ async function loadDayData(date) {
   try {
     const sr = await supa('settings?key=eq.string_asgn_'+date+'&select=value');
     const sd = await sr.json();
+    console.log('[LOAD] settings raw response for string_asgn_'+date+':', JSON.stringify(sd));
     if (Array.isArray(sd) && sd.length > 0) {
       const strAsgn = JSON.parse(sd[0].value) || {};
+      console.log('[LOAD] loaded string assignments:', JSON.stringify(strAsgn));
       Object.assign(assignments, strAsgn);
+    } else {
+      console.log('[LOAD] no string assignments found for', date);
     }
-  } catch(e) {}
+  } catch(e) { console.error('[LOAD] error loading string assignments:', e); }
 
   await loadFixedBoh();
 
@@ -1876,6 +1880,7 @@ function onQtyChange(el) {
   if (!assignments[id]) assignments[id] = {};
   assignments[id].qty = qty > 0 ? qty : null;
   el.classList.remove('auto-filled');
+  if (isNaN(parseInt(id))) console.log('[CHANGE] string id qty change:', id, '->', qty, 'assignments[id]:', JSON.stringify(assignments[id]));
 
   const dbItem = prepItems.find(i => i.id == id);
   const timeEl = document.getElementById('time-' + id);
@@ -1981,15 +1986,20 @@ async function upsertAssignments() {
   Object.entries(assignments).forEach(([itemId, asgn]) => {
     if (isNaN(parseInt(itemId))) strAsgn[itemId] = asgn;
   });
+  console.log('[SAVE] string assignments to save:', JSON.stringify(strAsgn));
   const strSaveResp = await supa('settings', {
     method: 'POST',
     prefer: 'resolution=merge-duplicates',
     headers: { 'Prefer': 'resolution=merge-duplicates' },
     body: JSON.stringify({ key: 'string_asgn_' + currentDate, value: JSON.stringify(strAsgn) })
   });
+  console.log('[SAVE] settings response status:', strSaveResp.status);
   if (!strSaveResp.ok) {
     const err = await strSaveResp.text();
+    console.error('[SAVE] FAILED:', err);
     throw new Error('String assignments save failed: ' + strSaveResp.status + ' ' + err);
+  } else {
+    console.log('[SAVE] string assignments saved OK');
   }
 }
 
