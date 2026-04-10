@@ -5,606 +5,1059 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kitchen Prep Manager</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #ffffff;
-    --bg2: #f5f5f3;
-    --bg3: #eeede9;
-    --text: #1a1a18;
-    --text2: #5f5e5a;
-    --text3: #888780;
-    --border: rgba(0,0,0,0.12);
-    --border2: rgba(0,0,0,0.22);
-    --info-bg: #e6f1fb;
-    --info-text: #185fa5;
-    --warn-bg: #faeeda;
-    --warn-text: #854f0b;
-    --danger-text: #a32d2d;
-    --success-text: #3b6d11;
+    --bg: #f5f3ef;
+    --card: #ffffff;
+    --border: #e0dbd2;
+    --text: #2c2825;
+    --text-muted: #7a7570;
+    --accent: #c8502a;
+    --accent-light: #f5ede9;
+    --green: #2e7d52;
+    --green-light: #e8f5ee;
+    --yellow: #e8a020;
+    --yellow-light: #fef7e8;
+    --blue: #2563a8;
+    --blue-light: #e8f0fc;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
     --radius: 8px;
-    --radius-lg: 12px;
+    --font: 'Georgia', serif;
+    --font-ui: 'Trebuchet MS', sans-serif;
   }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: var(--text); background: var(--bg3); min-height: 100vh; }
-  .app { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
-  h1 { font-size: 20px; font-weight: 600; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-ui); font-size: 14px; }
 
-  /* Topbar */
-  .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap; background: var(--bg); border-radius: var(--radius-lg); padding: 12px 16px; border: 0.5px solid var(--border); }
-  .topbar h1 { flex: 1; min-width: 160px; }
-  .date-select-wrap { display: flex; align-items: center; gap: 6px; }
-  .date-select-wrap label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+  /* SETUP SCREEN */
+  #setup-screen { display:none; position:fixed; inset:0; background:var(--bg); z-index:1000; overflow-y:auto; }
+  #setup-screen.active { display:flex; align-items:center; justify-content:center; }
+  .setup-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:40px; max-width:480px; width:90%; box-shadow:0 4px 20px rgba(0,0,0,0.1); }
+  .setup-card h1 { font-family:var(--font); font-size:24px; margin-bottom:6px; color:var(--accent); }
+  .setup-card p { color:var(--text-muted); margin-bottom:24px; font-size:13px; }
+  .setup-field { margin-bottom:16px; }
+  .setup-field label { display:block; font-weight:600; margin-bottom:6px; font-size:13px; }
+  .setup-field input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius); font-size:13px; font-family:var(--font-ui); }
+  .setup-field input:focus { outline:none; border-color:var(--accent); }
+  .btn-primary { background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:var(--radius); font-size:14px; font-weight:600; cursor:pointer; width:100%; margin-top:8px; }
+  .btn-primary:hover { background:#a8401f; }
 
-  /* Form elements */
-  select, input[type="text"], input[type="number"] {
-    background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius);
-    padding: 7px 10px; font-size: 13px; color: var(--text); font-family: inherit;
-    transition: border-color 0.15s;
-  }
-  select:focus, input:focus { outline: none; border-color: var(--info-text); }
-  button {
-    background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius);
-    padding: 7px 14px; font-size: 13px; cursor: pointer; color: var(--text); font-family: inherit;
-    transition: background 0.12s;
-  }
-  button:hover { background: var(--bg2); }
-  button.primary { background: var(--info-bg); color: var(--info-text); border-color: #b5d4f4; font-weight: 500; }
-  button.primary:hover { background: #d0e8f8; }
-  button.danger { color: var(--danger-text); border-color: #f7c1c1; }
-  button.danger:hover { background: #fcebeb; }
-  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  /* HEADER */
+  header { background:var(--card); border-bottom:2px solid var(--accent); padding:0 20px; display:flex; align-items:center; gap:16px; height:56px; position:sticky; top:0; z-index:100; }
+  .header-logo { font-family:var(--font); font-size:18px; font-weight:bold; color:var(--accent); white-space:nowrap; }
+  .header-rest { font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+  nav { display:flex; gap:4px; margin-left:auto; }
+  nav button { background:none; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-size:13px; font-family:var(--font-ui); color:var(--text-muted); font-weight:600; transition:all .15s; }
+  nav button.active { background:var(--accent-light); color:var(--accent); }
+  nav button:hover:not(.active) { background:var(--bg); }
 
-  /* Tabs */
-  .tabs { display: flex; gap: 2px; margin-bottom: 1.5rem; }
-  .tab { padding: 8px 18px; font-size: 13px; cursor: pointer; border-radius: var(--radius); color: var(--text2); transition: all 0.12s; }
-  .tab:hover { background: var(--bg); }
-  .tab.active { background: var(--bg); color: var(--text); font-weight: 500; box-shadow: 0 0 0 0.5px var(--border); }
+  /* TABS */
+  .tab { display:none; padding:20px; max-width:960px; margin:0 auto; }
+  .tab.active { display:block; }
 
-  /* Summary metrics */
-  .summary-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
-  .metric { background: var(--bg); border-radius: var(--radius); padding: 14px 16px; border: 0.5px solid var(--border); }
-  .metric .label { font-size: 11px; color: var(--text2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .metric .value { font-size: 22px; font-weight: 600; }
-  .metric .value.warn { color: var(--danger-text); }
-  .metric .value.good { color: var(--success-text); }
-  .metric.input-metric .value input {
-    font-size: 22px; font-weight: 600; border: none; background: transparent;
-    padding: 0; width: 100%; color: var(--text); font-family: inherit;
-  }
-  .metric.input-metric .value input::placeholder { color: var(--text3); font-weight: 400; font-size: 18px; }
-  .metric.input-metric .value input:focus { outline: none; border-bottom: 1.5px solid var(--info-text); }
+  /* SUMMARY BAR */
+  .summary-bar { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 20px; margin-bottom:16px; display:flex; gap:24px; flex-wrap:wrap; align-items:center; }
+  .summary-item { text-align:center; }
+  .summary-item .val { font-size:22px; font-weight:700; font-family:var(--font); color:var(--text); line-height:1; }
+  .summary-item .lbl { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-top:2px; }
+  .summary-item.over .val { color:var(--accent); }
+  .summary-item.under .val { color:var(--green); }
+  .summary-divider { width:1px; height:36px; background:var(--border); }
 
-  /* Section headers */
-  .section-header {
-    display: flex; align-items: center; gap: 8px; padding: 9px 14px;
-    background: var(--bg2); border-radius: var(--radius); margin: 1rem 0 2px;
-    cursor: pointer; border: 0.5px solid var(--border); user-select: none;
-  }
-  .section-header:hover { background: var(--bg3); }
-  .section-header h3 { font-size: 13px; font-weight: 600; flex: 1; letter-spacing: 0.01em; }
-  .section-time { font-size: 12px; color: var(--text2); }
-  .section-toggle { font-size: 11px; color: var(--text3); }
+  /* DATE ROW */
+  .date-row { display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+  .date-row select, .date-row input { padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); font-size:13px; font-family:var(--font-ui); background:var(--card); }
+  .date-row input[type=number] { width:90px; }
+  .date-row label { font-size:12px; color:var(--text-muted); font-weight:600; }
+  .date-row .spacer { flex:1; }
 
-  /* Prep table */
-  .prep-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: var(--bg); border-radius: 0 0 var(--radius) var(--radius); border: 0.5px solid var(--border); border-top: none; margin-bottom: 4px; }
-  .prep-table th { font-size: 11px; font-weight: 600; color: var(--text2); padding: 7px 10px; text-align: left; border-bottom: 0.5px solid var(--border); background: var(--bg); text-transform: uppercase; letter-spacing: 0.04em; }
-  .prep-table td { padding: 6px 8px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
-  .prep-table tr:last-child td { border-bottom: none; }
-  .prep-table tr:hover td { background: var(--bg2); }
-  .prep-table input[type="number"] { width: 68px; padding: 4px 7px; }
-  .prep-table input[type="text"] { width: 100%; padding: 4px 7px; }
-  .prep-table select { width: 100%; padding: 4px 7px; }
-  .time-cell { font-size: 12px; color: var(--text2); }
+  /* SECTION FILTER */
+  .section-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .section-filter button { padding:5px 12px; border:1px solid var(--border); border-radius:20px; font-size:12px; font-family:var(--font-ui); cursor:pointer; background:var(--card); color:var(--text-muted); transition:all .15s; }
+  .section-filter button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 
-  /* Settings */
-  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
-  .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 1rem; }
-  .card-sub { font-size: 13px; color: var(--text2); font-weight: 400; }
-  .list-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 0.5px solid var(--border); }
-  .list-item:last-child { border-bottom: none; }
-  .list-item span { flex: 1; font-size: 13px; }
-  .add-row { display: flex; gap: 6px; margin-top: 12px; }
-  .add-row input { flex: 1; }
-  .item-edit-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 0.5px solid var(--border); }
+  /* SECTION BLOCKS */
+  .section-block { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:14px; overflow:hidden; }
+  .section-header { background:var(--text); color:#fff; padding:10px 16px; font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
+  .section-header .sec-count { font-size:11px; background:rgba(255,255,255,.2); padding:2px 8px; border-radius:10px; font-weight:400; }
+  .section-header.frozen { background:#1e5a8a; }
 
-  /* Archive */
-  .archive-entry { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 8px; cursor: pointer; background: var(--bg); }
-  .archive-entry:hover { background: var(--bg2); }
-  .archive-entry .ae-date { font-weight: 600; font-size: 14px; }
-  .archive-entry .ae-meta { font-size: 12px; color: var(--text2); margin-top: 3px; }
-  .ae-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; margin-left: 6px; font-weight: 500; }
-  .ae-over { background: #fcebeb; color: var(--danger-text); }
-  .ae-under { background: #eaf3de; color: var(--success-text); }
-  .ae-ok { background: var(--bg2); color: var(--text2); }
-  .archive-detail { border: 0.5px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); background: var(--bg); padding: 8px; margin-bottom: 8px; display: none; }
-  .archive-detail table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .archive-detail td, .archive-detail th { padding: 5px 8px; border-bottom: 0.5px solid var(--border); text-align: left; }
-  .archive-detail tr:last-child td { border-bottom: none; }
+  /* FROZEN DAY SUB-HEADERS */
+  .frozen-day-header { background:#e8f0fc; border-bottom:1px solid #c8d8f0; padding:7px 16px; font-size:12px; font-weight:700; color:#2563a8; letter-spacing:.05em; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
+  .frozen-day-header .day-badge { background:#2563a8; color:#fff; padding:2px 8px; border-radius:10px; font-size:10px; }
+  .frozen-day-header .auto-badge { background:#e8f5ee; color:#2e7d52; border:1px solid #a8ddc0; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
 
-  /* Toast */
-  #toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a18; color: #fff; padding: 10px 18px; border-radius: var(--radius); font-size: 13px; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 999; }
-  #toast.show { opacity: 1; }
+  /* PREP TABLE */
+  .prep-table { width:100%; border-collapse:collapse; }
+  .prep-table th { padding:8px 10px; text-align:left; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--border); font-weight:600; background:var(--bg); }
+  .prep-table td { padding:7px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .prep-table tr:last-child td { border-bottom:none; }
+  .prep-table tr:hover td { background:#faf9f7; }
+  .item-name { font-size:13px; font-weight:500; }
+  .item-time { font-size:12px; color:var(--text-muted); }
+  .item-time.active { color:var(--accent); font-weight:600; }
 
-  /* Loading overlay */
-  #loading { position: fixed; inset: 0; background: rgba(255,255,255,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 100; }
-  #loading.hidden { display: none; }
-  .spinner { width: 28px; height: 28px; border: 2.5px solid var(--border); border-top-color: var(--info-text); border-radius: 50%; animation: spin 0.7s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #loading p { font-size: 13px; color: var(--text2); }
+  input.qty-input { width:64px; padding:5px 8px; border:1px solid var(--border); border-radius:5px; font-size:13px; text-align:center; font-family:var(--font-ui); }
+  input.qty-input:focus { outline:none; border-color:var(--accent); }
+  input.qty-input.auto-filled { border-color:var(--blue); background:var(--blue-light); }
 
-  /* Config screen */
-  #configScreen { max-width: 480px; margin: 4rem auto; background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 2rem; }
-  #configScreen h2 { font-size: 18px; font-weight: 600; margin-bottom: 0.5rem; }
-  #configScreen p { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; line-height: 1.6; }
-  #configScreen label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text2); display: block; margin-bottom: 4px; }
-  #configScreen input { width: 100%; margin-bottom: 1rem; }
-  .config-help { font-size: 12px; color: var(--text3); margin-top: -8px; margin-bottom: 1rem; }
+  select.assign-select { padding:5px 8px; border:1px solid var(--border); border-radius:5px; font-size:12px; font-family:var(--font-ui); min-width:90px; background:var(--card); }
+  input.initials-input { width:52px; padding:5px 6px; border:1px solid var(--border); border-radius:5px; font-size:12px; text-align:center; font-family:var(--font-ui); }
+  input.notes-input { width:140px; padding:5px 8px; border:1px solid var(--border); border-radius:5px; font-size:12px; font-family:var(--font-ui); }
+  input.qty-input:focus, select.assign-select:focus, input.initials-input:focus, input.notes-input:focus { outline:none; border-color:var(--accent); }
 
-  /* Print */
-  .print-header { display: none; }
+  /* SAVE BUTTON */
+  .save-row { display:flex; gap:10px; margin-top:14px; align-items:center; }
+  .btn-save { background:var(--green); color:#fff; border:none; padding:10px 22px; border-radius:var(--radius); font-size:13px; font-weight:600; cursor:pointer; }
+  .btn-save:hover { background:#256644; }
+  .btn-save:disabled { background:#aaa; cursor:default; }
+  .save-status { font-size:12px; color:var(--text-muted); }
+  .save-status.saving { color:var(--yellow); }
+  .save-status.saved { color:var(--green); }
+  .save-status.error { color:var(--accent); }
+
+  /* SCHEDULED HOURS */
+  .sched-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .sched-row label { font-size:12px; color:var(--text-muted); font-weight:600; }
+  .sched-row input { width:70px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); font-size:13px; }
+
+  /* ARCHIVE TAB */
+  .archive-list { display:flex; flex-direction:column; gap:10px; }
+  .archive-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+  .archive-card-header { padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:12px; }
+  .archive-card-header:hover { background:var(--bg); }
+  .archive-date { font-weight:700; font-family:var(--font); }
+  .archive-meta { font-size:12px; color:var(--text-muted); }
+  .archive-badge { font-size:11px; padding:3px 8px; border-radius:10px; margin-left:auto; font-weight:600; }
+  .badge-saved { background:var(--green-light); color:var(--green); }
+  .badge-draft { background:var(--yellow-light); color:var(--yellow); }
+  .archive-detail { display:none; padding:14px 16px; border-top:1px solid var(--border); background:var(--bg); }
+  .archive-detail.open { display:block; }
+  .archive-section-name { font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin:10px 0 4px; }
+  .archive-item-row { display:flex; gap:10px; padding:4px 0; font-size:13px; align-items:center; border-bottom:1px solid var(--border); }
+  .archive-item-row:last-child { border-bottom:none; }
+
+  /* SETTINGS TAB */
+  .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media(max-width:680px) { .settings-grid { grid-template-columns:1fr; } }
+  .settings-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
+  .settings-card h3 { font-size:14px; font-weight:700; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  .staff-list { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+  .staff-item { display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg); border-radius:5px; }
+  .staff-item span { flex:1; font-size:13px; }
+  .btn-small { padding:4px 10px; border-radius:5px; font-size:12px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--card); }
+  .btn-small.danger { color:var(--accent); border-color:var(--accent); }
+  .btn-small.danger:hover { background:var(--accent-light); }
+  .add-row { display:flex; gap:8px; }
+  .add-row input { flex:1; padding:7px 10px; border:1px solid var(--border); border-radius:5px; font-size:13px; font-family:var(--font-ui); }
+  .add-row input:focus { outline:none; border-color:var(--accent); }
+  .btn-add { background:var(--accent); color:#fff; border:none; padding:7px 14px; border-radius:5px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+
+  /* PREP ITEMS SETTINGS */
+  .section-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .section-tab { padding:5px 12px; border:1px solid var(--border); border-radius:20px; font-size:12px; cursor:pointer; background:var(--card); color:var(--text-muted); font-family:var(--font-ui); }
+  .section-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .items-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .items-table th { padding:6px 8px; text-align:left; font-size:11px; color:var(--text-muted); text-transform:uppercase; border-bottom:1px solid var(--border); }
+  .items-table td { padding:6px 8px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .items-table tr:last-child td { border-bottom:none; }
+  .items-table input { width:100%; padding:4px 6px; border:1px solid var(--border); border-radius:4px; font-size:12px; font-family:var(--font-ui); }
+  .items-table input[type=number] { width:60px; }
+  .drag-handle { cursor:grab; color:var(--text-muted); font-size:16px; padding:0 4px; user-select:none; }
+  .drag-handle:active { cursor:grabbing; }
+  .dragging { opacity:.4; }
+  .drag-over { border-top:2px solid var(--accent); }
+  .btn-icon { background:none; border:none; cursor:pointer; font-size:16px; padding:2px 6px; border-radius:4px; }
+  .btn-icon:hover { background:var(--accent-light); }
+
+  /* SETTINGS misc */
+  .settings-field { margin-bottom:12px; }
+  .settings-field label { display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:.04em; }
+  .settings-field input { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:5px; font-size:13px; font-family:var(--font-ui); }
+  .settings-field input:focus { outline:none; border-color:var(--accent); }
+  .btn-outline { background:none; border:1px solid var(--accent); color:var(--accent); padding:8px 16px; border-radius:var(--radius); font-size:13px; font-weight:600; cursor:pointer; }
+  .btn-outline:hover { background:var(--accent-light); }
+
+  /* PRINT */
   @media print {
-    body { background: white; }
-    .no-print { display: none !important; }
-    .print-header { display: block; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1.5px solid #ccc; }
-    .print-header h2 { font-size: 22px; font-weight: 700; }
-    .print-header p { font-size: 14px; color: #444; margin-top: 4px; }
-    .print-header .print-meta { font-size: 12px; color: #666; margin-top: 8px; }
-    .tabs { display: none; }
-    .section-header { background: #f0f0ee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .prep-table th { background: #f8f8f6 !important; -webkit-print-color-adjust: exact; }
-    .prep-table input, .prep-table select { border: none; background: transparent; -webkit-appearance: none; }
-    .summary-row { break-inside: avoid; }
-    .metric { border: 1px solid #ddd; }
-    #view-archive, #view-settings { display: none !important; }
+    header, nav, .date-row, .save-row, .summary-bar, .section-filter, .sched-row, #tab-archive, #tab-settings, .no-print { display:none !important; }
+    body { background:#fff; font-size:12px; }
+    .tab { display:block !important; padding:10px; max-width:100%; }
+    .section-block { border:1px solid #ccc; margin-bottom:10px; page-break-inside:avoid; }
+    .section-header { background:#333 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .frozen-day-header { background:#e0e8f5 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    input, select { border:none !important; background:transparent !important; }
+    .print-header { display:block !important; margin-bottom:16px; }
+    .prep-row-noqty { display:none !important; }
   }
+  .print-header { display:none; }
+  .print-header h2 { font-family:var(--font); font-size:20px; }
+  .print-header p { font-size:13px; color:#666; margin-top:4px; }
+
+  /* LOADING */
+  .loading-overlay { position:fixed; inset:0; background:rgba(245,243,239,.85); z-index:500; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; }
+  .loading-overlay.hidden { display:none; }
+  .spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .toast { position:fixed; bottom:20px; right:20px; background:var(--text); color:#fff; padding:10px 18px; border-radius:var(--radius); font-size:13px; z-index:999; opacity:0; transition:opacity .3s; pointer-events:none; }
+  .toast.show { opacity:1; }
+
+  /* ADD ITEM FORM */
+  .add-item-form { background:var(--bg); border-top:1px solid var(--border); padding:10px; display:none; gap:6px; flex-wrap:wrap; align-items:flex-end; }
+  .add-item-form.open { display:flex; }
+  .add-item-form input, .add-item-form select { padding:6px 8px; border:1px solid var(--border); border-radius:5px; font-size:12px; font-family:var(--font-ui); }
+  .add-item-form input[type=text] { flex:1; min-width:120px; }
+  .add-item-form input[type=number] { width:64px; }
+
+  .empty-state { padding:30px; text-align:center; color:var(--text-muted); font-size:13px; }
 </style>
 </head>
 <body>
 
-<div id="loading">
+<!-- SETUP SCREEN -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <h1>Kitchen Prep Manager</h1>
+    <p>Enter your Supabase credentials to get started. These are saved locally on this device.</p>
+    <div class="setup-field">
+      <label>Restaurant Name</label>
+      <input id="setup-rest-name" type="text" placeholder="e.g. Radish Nashville" />
+    </div>
+    <div class="setup-field">
+      <label>Supabase Project URL</label>
+      <input id="setup-url" type="text" placeholder="https://xxxx.supabase.co" />
+    </div>
+    <div class="setup-field">
+      <label>Supabase Anon Key</label>
+      <input id="setup-key" type="text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+    </div>
+    <button class="btn-primary" onclick="saveSetup()">Save & Continue</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay hidden" id="loading">
   <div class="spinner"></div>
-  <p>Loading prep manager...</p>
+  <div style="font-size:13px;color:var(--text-muted)">Loading...</div>
 </div>
 
-<div id="configScreen" style="display:none">
-  <h2>Connect your database</h2>
-  <p>Enter your Supabase project details below. You only need to do this once — these are saved to this browser.</p>
-  <label>Supabase Project URL</label>
-  <input type="text" id="cfgUrl" placeholder="https://xxxxxxxxxxxx.supabase.co">
-  <div class="config-help">Found in Supabase → Project Settings → API</div>
-  <label>Supabase Anon Key</label>
-  <input type="text" id="cfgKey" placeholder="eyJhbGciOiJIUzI1NiIs...">
-  <div class="config-help">Found in Supabase → Project Settings → API → anon / public key</div>
-  <label>Restaurant Name</label>
-  <input type="text" id="cfgName" placeholder="e.g. Belle Meade Location">
-  <div class="config-help">This will appear on printed prep lists</div>
-  <button class="primary" onclick="saveConfig()" style="width:100%;padding:10px">Connect &amp; set up</button>
-  <p id="cfgError" style="color:var(--danger-text);font-size:12px;margin-top:8px;display:none"></p>
-</div>
+<div class="toast" id="toast"></div>
 
-<div class="app" id="mainApp" style="display:none">
+<!-- HEADER -->
+<header>
+  <div>
+    <div class="header-logo">🥗 Prep Manager</div>
+    <div class="header-rest" id="header-rest-name"></div>
+  </div>
+  <nav>
+    <button class="active" onclick="switchTab('prep',this)">Prep List</button>
+    <button onclick="switchTab('archive',this)">Archive</button>
+    <button onclick="switchTab('settings',this)">Settings</button>
+    <button onclick="window.print()" class="no-print" style="color:var(--text-muted)">🖨</button>
+  </nav>
+</header>
 
+<!-- PREP TAB -->
+<div class="tab active" id="tab-prep">
   <div class="print-header">
-    <h2 id="printRestName"></h2>
-    <p id="printDateLine"></p>
-    <div class="print-meta" id="printMeta"></div>
+    <h2 id="print-rest-name"></h2>
+    <p id="print-date-line"></p>
   </div>
 
-  <div class="topbar no-print">
-    <h1 id="appTitle">Kitchen Prep</h1>
-    <div class="date-select-wrap">
-      <label>Prep for:</label>
-      <select id="dateSelect" onchange="switchDate()"></select>
+  <div class="no-print">
+    <div class="date-row">
+      <label>Date:</label>
+      <select id="date-select" onchange="onDateChange()"></select>
+      <label>Scheduled Hours:</label>
+      <input type="number" id="sched-hours" min="0" max="99" step="0.5" placeholder="hrs" onchange="saveSchedHours()" />
+      <label>Fixed BOH (min):</label>
+      <input type="number" id="fixed-boh" min="0" max="999" step="5" placeholder="min" onchange="saveFixedBoh()" />
+      <div class="spacer"></div>
     </div>
-    <button onclick="printView()" style="margin-left:auto">Print</button>
-    <button onclick="showTab('settings')">Settings</button>
-  </div>
 
-  <div class="tabs no-print">
-    <div class="tab active" onclick="showTab('daily')" id="tab-daily">Daily prep</div>
-    <div class="tab" onclick="showTab('archive')" id="tab-archive">Archive</div>
-    <div class="tab" onclick="showTab('settings')" id="tab-settings">Settings</div>
-  </div>
-
-  <div id="view-daily">
-    <div class="summary-row">
-      <div class="metric"><div class="label">Total items</div><div class="value" id="m-items">—</div></div>
-      <div class="metric"><div class="label">Assigned</div><div class="value" id="m-assigned">—</div></div>
-      <div class="metric"><div class="label">Est. total hours</div><div class="value" id="m-hours">—</div></div>
-      <div class="metric input-metric">
-        <div class="label">Scheduled hours</div>
-        <div class="value"><input type="number" id="scheduledHoursInput" min="0" step="0.5" placeholder="Enter" onchange="saveScheduledHours(this.value)"></div>
-      </div>
-      <div class="metric"><div class="label">Over / under</div><div class="value" id="m-delta">—</div></div>
-    </div>
-    <div id="prepSections"></div>
-    <div style="margin-top:1.5rem;display:flex;gap:10px;align-items:center" class="no-print">
-      <button class="primary" id="saveBtn" onclick="saveDay()">Save this list</button>
-      <span id="saveMsg" style="font-size:12px;color:var(--text2)"></span>
+    <!-- SECTION FILTER DROPDOWN -->
+    <div class="date-row" style="margin-bottom:10px;">
+      <label>Show Section:</label>
+      <select id="section-filter-select" onchange="filterSection(this.value)">
+        <option value="all">All Sections</option>
+      </select>
     </div>
   </div>
 
-  <div id="view-archive" style="display:none">
-    <div id="archiveList"></div>
-  </div>
-
-  <div id="view-settings" style="display:none">
-    <div class="settings-grid">
-      <div class="card">
-        <h3>Staff roster</h3>
-        <div id="staffList"></div>
-        <div class="add-row">
-          <input type="text" id="newStaff" placeholder="Staff name" onkeydown="if(event.key==='Enter')addStaff()">
-          <button onclick="addStaff()">Add</button>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Restaurant name</h3>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Appears on printed prep lists.</p>
-        <div style="display:flex;gap:6px">
-          <input type="text" id="restNameInput" style="flex:1" placeholder="Restaurant name">
-          <button onclick="saveRestName()">Save</button>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Fixed BOH time</h3>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Time (in minutes) for non-recipe work like cleaning, opening tasks, etc. Added to every day's estimated total.</p>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input type="number" id="fixedBohInput" min="0" step="5" placeholder="0" style="width:100px">
-          <span style="font-size:13px;color:var(--text2)">minutes</span>
-          <button onclick="saveFixedBoh()">Save</button>
-        </div>
-        <p id="fixedBohMsg" style="font-size:12px;color:var(--text2);margin-top:8px;display:none">Saved.</p>
-      </div>
-      <div class="card" style="grid-column:1/-1">
-        <h3>Prep items</h3>
-        <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
-          <span style="font-size:12px;color:var(--text2)">Filter:</span>
-          <select id="filterSection" onchange="renderItemSettings()">
-            <option value="">All sections</option>
-          </select>
-        </div>
-        <div style="display:grid;grid-template-columns:3fr 1.5fr 70px 70px 44px;gap:4px;padding:4px 0 6px;border-bottom:0.5px solid var(--border);font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.04em">
-          <span>Item name</span><span>Section</span><span>Mins</span><span>Step qty</span><span></span>
-        </div>
-        <div id="itemsList"></div>
-        <div style="margin-top:14px;border-top:0.5px solid var(--border);padding-top:12px">
-          <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em">Add new item</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-            <input type="text" id="newItemName" placeholder="Item name" style="flex:3;min-width:150px">
-            <select id="newItemSection" style="flex:1.5;min-width:130px"></select>
-            <input type="number" id="newItemTime" placeholder="Mins" style="flex:0 0 68px">
-            <input type="number" id="newItemUnit" placeholder="Step qty" style="flex:0 0 72px" title="Qty threshold that adds 30% to time">
-            <button onclick="addItem()">Add item</button>
-          </div>
-        </div>
-      </div>
+  <!-- Summary bar -->
+  <div class="summary-bar no-print">
+    <div class="summary-item">
+      <div class="val" id="sum-items">0</div>
+      <div class="lbl">Items</div>
     </div>
-    <div style="margin-top:1.5rem;text-align:right">
-      <button class="danger" onclick="resetConfig()">Reset connection settings</button>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <div class="val" id="sum-assigned">0</div>
+      <div class="lbl">Assigned</div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <div class="val" id="sum-hours">0</div>
+      <div class="lbl">Est. Hours</div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item">
+      <div class="val" id="sum-sched">—</div>
+      <div class="lbl">Sched. Hours</div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-item" id="sum-delta-wrap">
+      <div class="val" id="sum-delta">—</div>
+      <div class="lbl">Over/Under</div>
     </div>
   </div>
 
+  <div id="sections-container"></div>
+
+  <div class="save-row no-print">
+    <button class="btn-save" id="save-btn" onclick="saveDay()">💾 Save This List</button>
+    <span class="save-status" id="save-status"></span>
+  </div>
 </div>
 
-<div id="toast"></div>
+<!-- ARCHIVE TAB -->
+<div class="tab" id="tab-archive">
+  <h2 style="font-family:var(--font);margin-bottom:16px;">Archive</h2>
+  <div class="archive-list" id="archive-list"></div>
+</div>
+
+<!-- SETTINGS TAB -->
+<div class="tab" id="tab-settings">
+  <h2 style="font-family:var(--font);margin-bottom:16px;">Settings</h2>
+  <div class="settings-grid">
+
+    <!-- Restaurant -->
+    <div class="settings-card">
+      <h3>Restaurant</h3>
+      <div class="settings-field">
+        <label>Restaurant Name</label>
+        <input id="set-rest-name" type="text" onchange="saveRestName()" />
+      </div>
+      <div class="settings-field">
+        <label>Fixed BOH Time (minutes)</label>
+        <input id="set-fixed-boh" type="number" min="0" step="5" onchange="saveFixedBohSettings()" />
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Added to total time (cleaning, etc.). Saved to cloud.</div>
+      </div>
+      <div class="settings-field" style="margin-top:12px;">
+        <button class="btn-outline" onclick="reconfigure()">Re-configure Supabase</button>
+      </div>
+    </div>
+
+    <!-- Staff -->
+    <div class="settings-card">
+      <h3>Staff Roster</h3>
+      <div class="staff-list" id="staff-list"></div>
+      <div class="add-row">
+        <input id="new-staff-name" type="text" placeholder="Name" onkeydown="if(event.key==='Enter')addStaff()" />
+        <button class="btn-add" onclick="addStaff()">+ Add</button>
+      </div>
+    </div>
+
+    <!-- Prep Items -->
+    <div class="settings-card" style="grid-column:1/-1;">
+      <h3>Prep Items</h3>
+      <div class="section-tabs" id="settings-section-tabs"></div>
+      <div style="overflow-x:auto;">
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th style="width:24px;"></th>
+              <th>Item Name</th>
+              <th>Base Mins</th>
+              <th>Step Qty</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="items-tbody"></tbody>
+        </table>
+      </div>
+      <div class="add-item-form" id="add-item-form">
+        <input type="text" id="new-item-name" placeholder="Item name" />
+        <input type="number" id="new-item-mins" placeholder="Mins" min="0" />
+        <input type="number" id="new-item-step" placeholder="Step Qty" min="0" />
+        <button class="btn-add" onclick="addItem()">+ Add Item</button>
+        <button class="btn-small" onclick="toggleAddForm()">Cancel</button>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="btn-outline" onclick="toggleAddForm()">+ New Item</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-const SECTIONS = [
-  'Breakfast prep','Baked goods breakfast','Lunch prep','Baked goods lunch',
-  'Frozen prep','Baked goods prep','Evening prep','Catering'
-];
-const DEFAULT_ITEMS = [
-  {name:'Egg Bites - Bake and Plate',section:'Breakfast prep',mins:20,unit_qty:30},
-  {name:'Egg Sandwiches - Bake, Assemble, and Plate',section:'Breakfast prep',mins:20,unit_qty:30},
-  {name:'Egg White Bites - Bake and Plate',section:'Breakfast prep',mins:20,unit_qty:30},
-  {name:'Chia Seed Pudding - Top with Blueberries',section:'Breakfast prep',mins:15,unit_qty:12},
-  {name:'Blueberry Muffin - Bake and Plate',section:'Baked goods breakfast',mins:20,unit_qty:20},
-  {name:'Coconut Pineapple Muffin - Bake and Plate',section:'Baked goods breakfast',mins:15,unit_qty:20},
-  {name:'Coffee Cake - Slice and Plate',section:'Baked goods breakfast',mins:10,unit_qty:4},
-  {name:'Lemon Poppy Bread - Glaze, Slice, and Plate',section:'Baked goods breakfast',mins:10,unit_qty:4},
-  {name:'Zucchini Bread - Slice and Plate',section:'Baked goods breakfast',mins:10,unit_qty:4},
-  {name:'Kale Chicken Caesar Wraps - Prep, Assemble, Wrap, and Plate',section:'Lunch prep',mins:45,unit_qty:2},
-  {name:'Turkey Sandwich - Assemble, Wrap, and Plate',section:'Lunch prep',mins:45,unit_qty:2},
-  {name:'Butternut Squash Sandwich - Assemble, Wrap, and Plate',section:'Lunch prep',mins:45,unit_qty:2},
-  {name:'Lemony Kale Salad - Assemble and Plate',section:'Lunch prep',mins:30,unit_qty:2},
-  {name:'Farro Salad - Assemble and Plate',section:'Lunch prep',mins:30,unit_qty:2},
-  {name:'Veggie Quesadillas - Assemble, Bake, and Plate',section:'Lunch prep',mins:45,unit_qty:2},
-  {name:'Chicken Quesadillas - Assemble, Bake, and Plate',section:'Lunch prep',mins:20,unit_qty:2},
-  {name:'Asian Chicken Salad - Assemble and Plate',section:'Lunch prep',mins:30,unit_qty:2},
-  {name:'Belle Meade Chopped Salad - Assemble and Plate',section:'Lunch prep',mins:45,unit_qty:2},
-  {name:'Crunchy Baked Chicken Tenders - Assemble, Bake, and Plate',section:'Lunch prep',mins:45,unit_qty:2},
-  {name:'Grilled Chicken w/ Arugula Pesto - Bake, Assemble, and Plate',section:'Lunch prep',mins:25,unit_qty:2},
-  {name:'Chocolate Chip Cookies - Bake and Plate',section:'Baked goods lunch',mins:10,unit_qty:2},
-  {name:'Peanut Butter Cookies - Bake and Plate',section:'Baked goods lunch',mins:10,unit_qty:2},
-  {name:'Oreos - Bake, Assemble, and Plate',section:'Baked goods lunch',mins:20,unit_qty:2},
-  {name:'Brownies - Slice and Plate',section:'Baked goods lunch',mins:10,unit_qty:2},
-  {name:'Carrot Cake - Frost, Slice, and Plate',section:'Baked goods lunch',mins:15,unit_qty:2},
-  {name:'Oatmeal Cream Pie Cookies - Assemble and Plate',section:'Baked goods lunch',mins:15,unit_qty:2},
-  {name:'Seasonal Sugar Cookies - Plate',section:'Baked goods lunch',mins:5,unit_qty:2},
-  {name:'Blondies - Slice and Plate',section:'Baked goods lunch',mins:10,unit_qty:2},
-  {name:'Rice Krispy Treat - Slice and Plate',section:'Baked goods lunch',mins:10,unit_qty:2},
-  {name:'Buckeye Brownie - Assemble, Slice, and Plate',section:'Baked goods lunch',mins:30,unit_qty:2},
-  {name:'Bolognese (Assemble and Finish)',section:'Frozen prep',mins:45,unit_qty:1},
-  {name:'Bolognese (Prep Vegetables)',section:'Frozen prep',mins:45,unit_qty:1},
-  {name:'Chicken Noodle-Less Soup (Assemble and Finish)',section:'Frozen prep',mins:60,unit_qty:1},
-  {name:'Chicken Pot Pie (Assemble and Finish)',section:'Frozen prep',mins:60,unit_qty:1},
-  {name:'Enchiladas (Assemble and Finish)',section:'Frozen prep',mins:90,unit_qty:1},
-  {name:'Lasagna (Assemble and Finish)',section:'Frozen prep',mins:90,unit_qty:1},
-  {name:'Turkey Chili (Assemble and Finish)',section:'Frozen prep',mins:60,unit_qty:1},
-  {name:'GF Brownie - Bake',section:'Baked goods prep',mins:60,unit_qty:12},
-  {name:'Blondie - Bake',section:'Baked goods prep',mins:60,unit_qty:4},
-  {name:'Coffee Cake - Bake',section:'Baked goods prep',mins:60,unit_qty:8},
-  {name:'Zucchini Bread - Bake',section:'Baked goods prep',mins:75,unit_qty:14},
-  {name:'Chocolate Chip Cookie Dough - Prep',section:'Baked goods prep',mins:35,unit_qty:2},
-  {name:'Carrot Cake - Bake',section:'Baked goods prep',mins:45,unit_qty:2},
-  {name:'Caesar Dressing - Prep',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'Arugula Pesto - Prep',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'Avocado Mash - Prep and Portion',section:'Evening prep',mins:15,unit_qty:2},
-  {name:'Chia Seed Pudding Base - Prep',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'Egg Bites Base - Prep',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'Farro - Cook and Prep',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'FroYo Base - Prep',section:'Evening prep',mins:20,unit_qty:2},
-  {name:'Hummus - Prep',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'Kale - Wash and Prep',section:'Evening prep',mins:30,unit_qty:2},
-  {name:'Kale Dressing - Prep',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'Pickled Red Onions - Prep',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'Salmon Burgers - Prep and Assembly',section:'Evening prep',mins:15,unit_qty:2},
-  {name:'Brine Chicken Breast - Prep',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'Brined Chicken Breast - Bake',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'Turkey for Sandwiches - Slice and Prep',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'Whipped Goat Cheese - Prep',section:'Evening prep',mins:10,unit_qty:2},
-  {name:'Breakfast Sandwich Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Egg Bites Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Banana Bread Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Coffee Cake Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Zucchini Bread Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Muffin Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Pastry Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Full Sandwich (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Half Sandwich (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Chopped Salad (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Asian Chicken (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Pigs in a Blanket',section:'Catering',mins:45,unit_qty:1},
-  {name:'Herby Chicken Skewers',section:'Catering',mins:45,unit_qty:1},
-  {name:'Hummus (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Red Pepper and Walnut Dip (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'White Bean Puree (Assemble)',section:'Catering',mins:10,unit_qty:1},
-  {name:'Toasted Crostini (Assemble)',section:'Catering',mins:10,unit_qty:1},
-  {name:'Crudite Platter (Assemble)',section:'Catering',mins:10,unit_qty:1},
-  {name:'Cheese Board (Assemble)',section:'Catering',mins:10,unit_qty:1},
-  {name:'Mini Cheese Board (Assemble)',section:'Catering',mins:10,unit_qty:1},
-  {name:'Chicken Salad Sliders',section:'Catering',mins:45,unit_qty:1},
-  {name:'Roast Beef Sliders',section:'Catering',mins:45,unit_qty:1},
-  {name:'Turkey (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Roasted Butternut Squash Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Tofu Bahn Mi Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Roasted Vegetable and Mozz Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Tofu Bahn Mi Platter',section:'Catering',mins:35,unit_qty:1},
-  {name:'Caesar Salad (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Lemony Kale (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Butternut Squash and Farro (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Roasted Cauliflower (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Beet, Fennel and Orange Salad (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Quinoa Salad (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Roasted Salmon with Herbs (Entrée Platter)',section:'Catering',mins:45,unit_qty:1},
-  {name:'Chicken with Pesto (Entrée Platter - Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Chicken Sausage Lasagna (Entrée Platter - Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Chicken and Spinach Enchiladas (Entrée Platter - Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Chicken Pot Pie (Entrée Platter - Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Herby Chicken Skewers (Entrée Platter)',section:'Catering',mins:45,unit_qty:1},
-  {name:'Tenders (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Mac n Cheese',section:'Catering',mins:45,unit_qty:1},
-  {name:'Chocolate Cookie Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Two Bite Blondie Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Two Bite Brownie Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Cookie / Brownie / Blondie Platter (Assemble)',section:'Catering',mins:5,unit_qty:1},
-  {name:'Birthday Cake',section:'Catering',mins:60,unit_qty:1},
-  {name:'Orange Olive Oil Cake',section:'Catering',mins:60,unit_qty:1},
-  {name:'Chocolate Cake',section:'Catering',mins:60,unit_qty:1},
-  {name:'Cookie Cake',section:'Catering',mins:60,unit_qty:1},
-  {name:'Iced Coffee',section:'Catering',mins:5,unit_qty:1},
-  {name:'Lemonade',section:'Catering',mins:5,unit_qty:1},
-  {name:'Hot Coffee',section:'Catering',mins:5,unit_qty:1},
+// ============================================================
+// CONFIG & STATE
+// ============================================================
+let SUPA_URL = '', SUPA_KEY = '', REST_NAME = '';
+let prepItems = [], staff = [], assignments = {}, currentDate = '', schedHours = null, fixedBoh = 0;
+let saveDebounce = null;
+let settingsSectionIdx = 0;
+let currentSectionFilter = 'all';
+
+// FROZEN PREP DATA — day-based schedule
+const FROZEN_ITEMS_BY_DAY = {
+  Monday: [
+    { name: 'Bolognese (Defrost Chicken Stock and Ground Beef)', mins: 5 },
+    { name: 'Chicken Pot Pie (Defrost Chicken Stock)', mins: 5 },
+  ],
+  Tuesday: [
+    { name: 'Bolognese (Assemble and Finish)', mins: 45 },
+    { name: 'Chicken Pot Pie (Prep Filling)', mins: 60 },
+    { name: 'Chicken Pot Pie (Prep Vegetables)', mins: 45 },
+  ],
+  Wednesday: [
+    { name: 'Chicken Pot Pie (Assemble and Finish)', mins: 60 },
+    { name: 'Chicken Teriyaki Meatballs (Defrost Radish Chicken)', mins: 5 },
+    { name: 'Turkey Chili (Prep)', mins: 45 },
+  ],
+  Thursday: [
+    { name: 'Chicken Teriyaki Meatballs (Prep)', mins: 30 },
+    { name: 'Enchiladas (Defrost Radish Chicken)', mins: 5 },
+    { name: 'Lasagna (Prep Chicken Sausage and Spinach Filling)', mins: 30 },
+    { name: 'Lasagna (Prep Ricotta Filling)', mins: 30 },
+    { name: 'Lasagna (Prep Sauce)', mins: 45 },
+    { name: 'Turkey Chili (Assemble and Finish)', mins: 60 },
+  ],
+  Friday: [
+    { name: 'Bolognese (Prep Vegetables)', mins: 45 },
+    { name: 'Chicken Noodle-Less Soup (Prep Vegetables)', mins: 45 },
+    { name: 'Chicken Teriyaki Meatballs (Assemble and Finish)', mins: 60 },
+    { name: 'Enchiladas (Prep)', mins: 45 },
+    { name: 'Enchiladas (Prep Chicken and Spinach Filling)', mins: 45 },
+    { name: 'Lasagna (Assemble and Finish)', mins: 90 },
+    { name: 'Lentil Soup (Prep Vegetables)', mins: 45 },
+  ],
+  Saturday: [
+    { name: 'Chicken Noodle-Less Soup (Assemble and Finish)', mins: 60 },
+    { name: 'Enchiladas (Assemble and Finish)', mins: 90 },
+    { name: 'Green Chicken Chili (Prep, Assemble, and Finish)', mins: 90 },
+    { name: 'Lentil Soup (Assemble and Finish)', mins: 60 },
+    { name: 'Stuffed Shells (Prep Ricotta Filling)', mins: 30 },
+    { name: 'Stuffed Shells (Prep Sauce)', mins: 30 },
+  ],
+  Sunday: [
+    { name: 'Stuffed Shells (Assemble and Finish)', mins: 60 },
+  ],
+};
+
+const SECTION_ORDER = [
+  'Breakfast prep',
+  'Baked goods breakfast',
+  'Lunch prep',
+  'Baked goods lunch',
+  'Frozen prep',
+  'Baked goods prep',
+  'Evening prep',
+  'Catering',
 ];
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let SB_URL = '', SB_KEY = '', REST_NAME = '';
-let activeDate = '';
-let items = [], staff = [], archiveDays = [];
-let todayAssignments = {}; // { itemId: {qty, assigned_to, notes} }
-let scheduledHours = null;
-let pendingSaves = {}; // debounce timers
-let collapsedSections = new Set();
-
-// ── Config ────────────────────────────────────────────────────────────────────
-let FIXED_BOH_MINS = 0;
-
-function loadConfig() {
-  SB_URL = localStorage.getItem('sb_url') || '';
-  SB_KEY = localStorage.getItem('sb_key') || '';
-  REST_NAME = localStorage.getItem('rest_name') || 'Kitchen Prep';
-  FIXED_BOH_MINS = parseInt(localStorage.getItem('fixed_boh_mins') || '0') || 0;
+function supa(path, opts={}) {
+  return fetch(SUPA_URL + '/rest/v1/' + path, {
+    ...opts,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || '',
+      ...(opts.headers||{}),
+    }
+  });
 }
 
-function saveConfig() {
-  const url = document.getElementById('cfgUrl').value.trim().replace(/\/$/, '');
-  const key = document.getElementById('cfgKey').value.trim();
-  const name = document.getElementById('cfgName').value.trim();
-  const errEl = document.getElementById('cfgError');
-  errEl.style.display = 'none';
-  if (!url || !key || !name) { errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return; }
-  if (!url.includes('supabase.co')) { errEl.textContent = 'URL should contain supabase.co'; errEl.style.display = 'block'; return; }
-  localStorage.setItem('sb_url', url);
-  localStorage.setItem('sb_key', key);
+// ============================================================
+// SETUP
+// ============================================================
+function checkSetup() {
+  SUPA_URL = localStorage.getItem('supa_url') || '';
+  SUPA_KEY = localStorage.getItem('supa_key') || '';
+  REST_NAME = localStorage.getItem('rest_name') || 'My Restaurant';
+  if (!SUPA_URL || !SUPA_KEY) {
+    document.getElementById('setup-screen').classList.add('active');
+    return false;
+  }
+  document.getElementById('header-rest-name').textContent = REST_NAME;
+  document.getElementById('print-rest-name').textContent = REST_NAME;
+  document.getElementById('set-rest-name').value = REST_NAME;
+  return true;
+}
+
+function saveSetup() {
+  const url = document.getElementById('setup-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('setup-key').value.trim();
+  const name = document.getElementById('setup-rest-name').value.trim() || 'My Restaurant';
+  if (!url || !key) { alert('Please fill in all fields.'); return; }
+  localStorage.setItem('supa_url', url);
+  localStorage.setItem('supa_key', key);
   localStorage.setItem('rest_name', name);
   location.reload();
 }
 
-function resetConfig() {
-  if (!confirm('This will disconnect from the database. You can reconnect anytime. Continue?')) return;
-  localStorage.removeItem('sb_url');
-  localStorage.removeItem('sb_key');
-  localStorage.removeItem('rest_name');
-  location.reload();
-}
-
-// ── Supabase API ───────────────────────────────────────────────────────────────
-async function sb(method, path, body) {
-  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
-    method,
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': `Bearer ${SB_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': method === 'POST' ? 'return=representation' : 'return=representation',
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(err);
+function reconfigure() {
+  if (confirm('Re-enter Supabase credentials?')) {
+    localStorage.removeItem('supa_url');
+    localStorage.removeItem('supa_key');
+    location.reload();
   }
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
 }
 
-async function sbGet(path) { return sb('GET', path); }
-async function sbPost(path, body) { return sb('POST', path, body); }
-async function sbPatch(path, body) { return sb('PATCH', path, body); }
-async function sbDelete(path) { return sb('DELETE', path); }
-async function sbUpsert(path, body) {
-  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
-    method: 'POST',
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': `Bearer ${SB_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates,return=representation',
-    },
-    body: JSON.stringify(body)
-  });
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
+function saveRestName() {
+  const name = document.getElementById('set-rest-name').value.trim();
+  localStorage.setItem('rest_name', name);
+  REST_NAME = name;
+  document.getElementById('header-rest-name').textContent = name;
+  document.getElementById('print-rest-name').textContent = name;
 }
 
-// ── Init ───────────────────────────────────────────────────────────────────────
+// ============================================================
+// INIT
+// ============================================================
 async function init() {
-  loadConfig();
-  if (!SB_URL || !SB_KEY) {
-    document.getElementById('loading').classList.add('hidden');
-    document.getElementById('configScreen').style.display = 'block';
-    return;
-  }
+  if (!checkSetup()) return;
+  showLoading(true);
   try {
-    await loadAll();
-    document.getElementById('loading').classList.add('hidden');
-    document.getElementById('mainApp').style.display = 'block';
-    document.getElementById('appTitle').textContent = REST_NAME;
+    await Promise.all([loadStaff(), loadPrepItems()]);
+    buildDateDropdown();
+    buildSectionFilterDropdown();
+    currentDate = document.getElementById('date-select').value;
+    await loadDayData(currentDate);
+    await loadArchive();
   } catch(e) {
-    document.getElementById('loading').classList.add('hidden');
-    document.getElementById('configScreen').style.display = 'block';
-    document.getElementById('cfgError').textContent = 'Could not connect: ' + e.message;
-    document.getElementById('cfgError').style.display = 'block';
-    document.getElementById('cfgUrl').value = SB_URL;
-    document.getElementById('cfgKey').value = SB_KEY;
+    console.error(e);
+    showToast('Connection error — check Supabase credentials', 4000);
   }
+  showLoading(false);
 }
 
-async function loadAll() {
-  activeDate = isoToday();
-  // Seed items if none exist
-  const existingItems = await sbGet('prep_items?select=id&limit=1');
-  if (!existingItems || existingItems.length === 0) {
-    await seedItems();
+// ============================================================
+// SETTINGS — FIXED BOH (Supabase)
+// ============================================================
+async function loadFixedBoh() {
+  try {
+    const r = await supa('settings?key=eq.fixed_boh&select=value');
+    const d = await r.json();
+    if (d && d.length > 0) {
+      fixedBoh = parseFloat(d[0].value) || 0;
+    } else {
+      fixedBoh = 0;
+    }
+  } catch(e) {
+    fixedBoh = 0;
   }
-  await Promise.all([loadItems(), loadStaff(), loadArchiveDates()]);
-  buildDateSelect();
-  await loadDayData();
-  renderAll();
+  document.getElementById('fixed-boh').value = fixedBoh || '';
+  document.getElementById('set-fixed-boh').value = fixedBoh || '';
 }
 
-async function seedItems() {
-  const rows = DEFAULT_ITEMS.map((item, i) => ({ ...item, sort_order: i }));
-  await sbUpsert('prep_items', rows);
+async function saveFixedBoh() {
+  const val = parseFloat(document.getElementById('fixed-boh').value) || 0;
+  fixedBoh = val;
+  document.getElementById('set-fixed-boh').value = val || '';
+  await persistFixedBoh(val);
+  updateSummary();
 }
 
-// ── Data loaders ───────────────────────────────────────────────────────────────
-async function loadItems() {
-  items = await sbGet('prep_items?select=*&order=sort_order.asc,created_at.asc') || [];
+async function saveFixedBohSettings() {
+  const val = parseFloat(document.getElementById('set-fixed-boh').value) || 0;
+  fixedBoh = val;
+  document.getElementById('fixed-boh').value = val || '';
+  await persistFixedBoh(val);
+  updateSummary();
 }
 
+async function persistFixedBoh(val) {
+  // Upsert into settings table
+  try {
+    await supa('settings', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ key: 'fixed_boh', value: String(val) })
+    });
+  } catch(e) { console.error('Fixed BOH save error', e); }
+}
+
+// ============================================================
+// STAFF
+// ============================================================
 async function loadStaff() {
-  staff = await sbGet('staff?select=*&order=name.asc') || [];
+  const r = await supa('staff?select=id,name&order=name');
+  staff = await r.json();
+  renderStaff();
 }
 
-async function loadArchiveDates() {
-  const rows = await sbGet('prep_days?select=prep_date,scheduled_hours,saved_at&order=prep_date.desc') || [];
-  archiveDays = rows;
+function renderStaff() {
+  const list = document.getElementById('staff-list');
+  list.innerHTML = staff.map(s => `
+    <div class="staff-item">
+      <span>${s.name}</span>
+      <button class="btn-small danger" onclick="deleteStaff(${s.id})">Remove</button>
+    </div>
+  `).join('');
 }
 
-async function loadDayData() {
-  const [dayRows, assignRows] = await Promise.all([
-    sbGet(`prep_days?prep_date=eq.${activeDate}&select=*`),
-    sbGet(`prep_assignments?prep_date=eq.${activeDate}&select=*`)
-  ]);
-  const day = dayRows && dayRows[0];
-  scheduledHours = day ? day.scheduled_hours : null;
-  document.getElementById('scheduledHoursInput').value = scheduledHours || '';
-  todayAssignments = {};
-  (assignRows || []).forEach(a => { todayAssignments[a.item_id] = a; });
+async function addStaff() {
+  const inp = document.getElementById('new-staff-name');
+  const name = inp.value.trim();
+  if (!name) return;
+  const r = await supa('staff', { method:'POST', prefer:'return=representation', body: JSON.stringify({name}) });
+  const d = await r.json();
+  staff.push(d[0]);
+  staff.sort((a,b)=>a.name.localeCompare(b.name));
+  renderStaff();
+  inp.value = '';
+  renderPrepList();
 }
 
-// ── Date helpers ───────────────────────────────────────────────────────────────
-function isoToday() {
-  return new Date().toISOString().slice(0, 10);
-}
-function isoTomorrow() {
-  const d = new Date(); d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
-}
-function formatDateLabel(iso) {
-  const today = isoToday(), tomorrow = isoTomorrow();
-  const d = new Date(iso + 'T12:00:00');
-  const long = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-  if (iso === today) return 'Today — ' + long;
-  if (iso === tomorrow) return 'Tomorrow — ' + long;
-  return long;
+async function deleteStaff(id) {
+  if (!confirm('Remove this staff member?')) return;
+  await supa('staff?id=eq.'+id, { method:'DELETE' });
+  staff = staff.filter(s=>s.id!==id);
+  renderStaff();
+  renderPrepList();
 }
 
-function buildDateSelect() {
-  const sel = document.getElementById('dateSelect');
-  const base = [isoToday(), isoTomorrow()];
-  const archived = archiveDays.map(d => d.prep_date).filter(d => !base.includes(d)).slice(0, 60);
-  const all = [...base, ...archived];
-  sel.innerHTML = all.map(iso =>
-    `<option value="${iso}" ${iso === activeDate ? 'selected' : ''}>${formatDateLabel(iso)}</option>`
-  ).join('');
+// ============================================================
+// PREP ITEMS
+// ============================================================
+async function loadPrepItems() {
+  const r = await supa('prep_items?select=id,name,section,mins,unit_qty,sort_order&order=sort_order,id');
+  prepItems = await r.json();
+  renderSettingsItems(settingsSectionIdx);
+  buildSettingsSectionTabs();
 }
 
-async function switchDate() {
-  activeDate = document.getElementById('dateSelect').value;
-  showLoading('Loading...');
-  await loadDayData();
-  hideLoading();
-  renderDaily();
+function buildSettingsSectionTabs() {
+  const container = document.getElementById('settings-section-tabs');
+  const tabs = document.getElementById('settings-section-tabs');
+  tabs.innerHTML = SECTION_ORDER.map((s,i)=>`
+    <button class="section-tab${i===settingsSectionIdx?' active':''}" onclick="switchSettingsSection(${i})">${s}</button>
+  `).join('');
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────────
-function renderAll() {
-  renderDaily();
-  renderSettings();
+function switchSettingsSection(idx) {
+  settingsSectionIdx = idx;
+  buildSettingsSectionTabs();
+  renderSettingsItems(idx);
 }
 
-function showTab(t) {
-  ['daily', 'archive', 'settings'].forEach(x => {
-    document.getElementById('view-' + x).style.display = x === t ? '' : 'none';
-    document.getElementById('tab-' + x).classList.toggle('active', x === t);
+function renderSettingsItems(idx) {
+  const section = SECTION_ORDER[idx];
+  const items = prepItems.filter(i=>i.section===section);
+  const tbody = document.getElementById('items-tbody');
+  tbody.innerHTML = items.map(item=>`
+    <tr draggable="true" data-id="${item.id}"
+      ondragstart="dragStart(event,${item.id})"
+      ondragover="dragOver(event)"
+      ondrop="dropItem(event,${item.id})"
+      ondragleave="dragLeave(event)">
+      <td><span class="drag-handle">⠿</span></td>
+      <td><input type="text" value="${escHtml(item.name)}" onchange="updateItem(${item.id},'name',this.value)" style="min-width:200px;" /></td>
+      <td><input type="number" value="${item.mins||0}" onchange="updateItem(${item.id},'mins',this.value)" /></td>
+      <td><input type="number" value="${item.unit_qty||0}" onchange="updateItem(${item.id},'unit_qty',this.value)" /></td>
+      <td><button class="btn-icon" onclick="deleteItem(${item.id})" title="Delete">🗑</button></td>
+    </tr>
+  `).join('');
+  if (items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text-muted)">No items in this section yet.</td></tr>';
+  }
+}
+
+async function updateItem(id, field, val) {
+  const item = prepItems.find(i=>i.id===id);
+  if (!item) return;
+  item[field] = field==='mins'||field==='unit_qty' ? (parseFloat(val)||0) : val;
+  await supa('prep_items?id=eq.'+id, { method:'PATCH', body: JSON.stringify({[field]: item[field]}) });
+  renderPrepList();
+}
+
+async function deleteItem(id) {
+  if (!confirm('Delete this item?')) return;
+  await supa('prep_items?id=eq.'+id, { method:'DELETE' });
+  prepItems = prepItems.filter(i=>i.id!==id);
+  renderSettingsItems(settingsSectionIdx);
+  renderPrepList();
+}
+
+function toggleAddForm() {
+  const f = document.getElementById('add-item-form');
+  f.classList.toggle('open');
+}
+
+async function addItem() {
+  const name = document.getElementById('new-item-name').value.trim();
+  const mins = parseFloat(document.getElementById('new-item-mins').value)||0;
+  const unit_qty = parseFloat(document.getElementById('new-item-step').value)||0;
+  const section = SECTION_ORDER[settingsSectionIdx];
+  if (!name) return;
+  const maxSort = Math.max(0, ...prepItems.map(i=>i.sort_order||0));
+  const r = await supa('prep_items', {
+    method:'POST', prefer:'return=representation',
+    body: JSON.stringify({name, mins, unit_qty, section, sort_order: maxSort+1})
   });
-  if (t === 'archive') renderArchive();
-  if (t === 'settings') renderSettings();
+  const d = await r.json();
+  prepItems.push(d[0]);
+  renderSettingsItems(settingsSectionIdx);
+  renderPrepList();
+  document.getElementById('new-item-name').value = '';
+  document.getElementById('new-item-mins').value = '';
+  document.getElementById('new-item-step').value = '';
 }
 
+// ============================================================
+// DRAG & DROP (Settings)
+// ============================================================
+let dragId = null;
+function dragStart(e, id) { dragId = id; e.currentTarget.classList.add('dragging'); }
+function dragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function dragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+async function dropItem(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (dragId === targetId) return;
+  const section = SECTION_ORDER[settingsSectionIdx];
+  const sectionItems = prepItems.filter(i=>i.section===section);
+  const fromIdx = sectionItems.findIndex(i=>i.id===dragId);
+  const toIdx = sectionItems.findIndex(i=>i.id===targetId);
+  sectionItems.splice(toIdx, 0, sectionItems.splice(fromIdx, 1)[0]);
+  sectionItems.forEach((item, idx) => { item.sort_order = idx + 1; });
+  // persist
+  await Promise.all(sectionItems.map(item =>
+    supa('prep_items?id=eq.'+item.id, { method:'PATCH', body: JSON.stringify({sort_order: item.sort_order}) })
+  ));
+  document.querySelectorAll('.dragging').forEach(el=>el.classList.remove('dragging'));
+  renderSettingsItems(settingsSectionIdx);
+}
+
+// ============================================================
+// DATE DROPDOWN
+// ============================================================
+function buildDateDropdown() {
+  const sel = document.getElementById('date-select');
+  sel.innerHTML = '';
+  const today = new Date();
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+  const past = [];
+  for (let i=1;i<=14;i++) { const d=new Date(today); d.setDate(today.getDate()-i); past.push(d); }
+  const addOpt = (date, label) => {
+    const o = document.createElement('option');
+    o.value = fmtDate(date);
+    o.textContent = label || fmtDateDisplay(date);
+    sel.appendChild(o);
+  };
+  addOpt(tomorrow, 'Tomorrow — ' + fmtDateDisplay(tomorrow));
+  addOpt(today, 'Today — ' + fmtDateDisplay(today));
+  past.forEach(d => addOpt(d, fmtDateDisplay(d)));
+  sel.value = fmtDate(today);
+}
+
+function fmtDate(d) { return d.toISOString().split('T')[0]; }
+function fmtDateDisplay(d) {
+  return d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', year:'numeric'});
+}
+function getDayName(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-US', {weekday:'long'});
+}
+
+// ============================================================
+// SECTION FILTER DROPDOWN
+// ============================================================
+function buildSectionFilterDropdown() {
+  const sel = document.getElementById('section-filter-select');
+  sel.innerHTML = '<option value="all">All Sections</option>';
+  SECTION_ORDER.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s;
+    o.textContent = s;
+    sel.appendChild(o);
+  });
+}
+
+function filterSection(val) {
+  currentSectionFilter = val;
+  renderPrepList();
+}
+
+// ============================================================
+// DAY DATA
+// ============================================================
+async function onDateChange() {
+  currentDate = document.getElementById('date-select').value;
+  showLoading(true);
+  await loadDayData(currentDate);
+  showLoading(false);
+}
+
+async function loadDayData(date) {
+  // Load scheduled hours
+  const dpr = await supa('prep_days?prep_date=eq.'+date+'&select=scheduled_hours,saved_at');
+  const dpd = await dpr.json();
+  if (dpd && dpd.length > 0) {
+    schedHours = dpd[0].scheduled_hours;
+    document.getElementById('sched-hours').value = schedHours || '';
+    const saved = dpd[0].saved_at;
+    document.getElementById('save-btn').disabled = !!saved;
+    document.getElementById('save-status').textContent = saved ? '✅ Saved ' + new Date(saved).toLocaleString() : '';
+    document.getElementById('save-status').className = 'save-status' + (saved ? ' saved' : '');
+  } else {
+    schedHours = null;
+    document.getElementById('sched-hours').value = '';
+    document.getElementById('save-btn').disabled = false;
+    document.getElementById('save-status').textContent = '';
+  }
+
+  // Load assignments
+  const ar = await supa('prep_assignments?prep_date=eq.'+date+'&select=item_id,qty,assigned_to,initials,notes');
+  const ad = await ar.json();
+  assignments = {};
+  (ad||[]).forEach(a => {
+    assignments[a.item_id] = { qty: a.qty, assigned_to: a.assigned_to, initials: a.initials, notes: a.notes };
+  });
+
+  // Load fixed boh from supabase
+  await loadFixedBoh();
+
+  document.getElementById('print-date-line').textContent = 'Date: ' + fmtDateDisplay(new Date(date+'T12:00:00')) + '  |  Scheduled: ' + (schedHours||'—') + ' hrs  |  Fixed BOH: ' + fixedBoh + ' min';
+
+  renderPrepList();
+}
+
+// ============================================================
+// RENDER PREP LIST
+// ============================================================
+function renderPrepList() {
+  const container = document.getElementById('sections-container');
+  container.innerHTML = '';
+
+  const dayName = getDayName(currentDate);
+  const frozenForToday = FROZEN_ITEMS_BY_DAY[dayName] || [];
+
+  const sections = currentSectionFilter === 'all'
+    ? SECTION_ORDER
+    : SECTION_ORDER.filter(s => s === currentSectionFilter);
+
+  sections.forEach(section => {
+    if (section === 'Frozen prep') {
+      renderFrozenSection(container, frozenForToday, dayName);
+    } else {
+      const items = prepItems.filter(i => i.section === section);
+      if (items.length === 0) return;
+      renderRegularSection(container, section, items);
+    }
+  });
+
+  updateSummary();
+}
+
+function renderRegularSection(container, section, items) {
+  const block = document.createElement('div');
+  block.className = 'section-block';
+  block.dataset.section = section;
+
+  const header = document.createElement('div');
+  header.className = 'section-header';
+  header.innerHTML = `${section} <span class="sec-count" id="sec-count-${CSS.escape(section)}"></span>`;
+  block.appendChild(header);
+
+  const table = document.createElement('table');
+  table.className = 'prep-table';
+  table.innerHTML = `<thead><tr>
+    <th style="width:35%">Item</th>
+    <th style="width:60px">Qty</th>
+    <th style="width:80px">Assigned</th>
+    <th style="width:60px">Est. Min</th>
+    <th style="width:52px">Initials</th>
+    <th>Notes</th>
+  </tr></thead>`;
+  const tbody = document.createElement('tbody');
+
+  items.forEach(item => {
+    const asgn = assignments[item.id] || {};
+    const qty = asgn.qty != null ? asgn.qty : '';
+    const mins = calcItemMins(item, parseFloat(qty) || 0);
+    const hasQty = qty !== '' && parseFloat(qty) > 0;
+
+    const tr = document.createElement('tr');
+    tr.dataset.itemId = item.id;
+    if (!hasQty) tr.classList.add('prep-row-noqty');
+
+    tr.innerHTML = `
+      <td class="item-name">${escHtml(item.name)}</td>
+      <td><input class="qty-input" type="number" min="0" value="${escHtml(qty)}" data-id="${item.id}" onchange="onQtyChange(this)" oninput="onQtyChange(this)" /></td>
+      <td><select class="assign-select" data-id="${item.id}" onchange="onAssignChange(this)">
+        <option value="">—</option>
+        ${staff.map(s=>`<option value="${escHtml(s.name)}"${asgn.assigned_to===s.name?' selected':''}>${escHtml(s.name)}</option>`).join('')}
+      </select></td>
+      <td class="item-time${mins>0?' active':''}" id="time-${item.id}">${mins > 0 ? mins + ' min' : ''}</td>
+      <td><input class="initials-input" type="text" value="${escHtml(asgn.initials||'')}" data-id="${item.id}" onchange="onFieldChange(this,'initials')" /></td>
+      <td><input class="notes-input" type="text" value="${escHtml(asgn.notes||'')}" data-id="${item.id}" onchange="onFieldChange(this,'notes')" /></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  block.appendChild(table);
+  container.appendChild(block);
+  updateSectionCount(section);
+}
+
+function renderFrozenSection(container, frozenForToday, dayName) {
+  const block = document.createElement('div');
+  block.className = 'section-block';
+  block.dataset.section = 'Frozen prep';
+
+  const header = document.createElement('div');
+  header.className = 'section-header frozen';
+  header.innerHTML = `❄️ Frozen Prep <span class="sec-count" id="sec-count-Frozen prep"></span>`;
+  block.appendChild(header);
+
+  // DB-based frozen items (from prep_items where section='Frozen prep')
+  const dbFrozenItems = prepItems.filter(i => i.section === 'Frozen prep');
+
+  // Build by-day groups for ALL days (for db items organized with day in name, or just render them)
+  // We render: first show today's auto-filled items, then db items not in today's list
+  const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+  // Show today's scheduled items with auto-fill
+  if (frozenForToday.length > 0) {
+    const dayBanner = document.createElement('div');
+    dayBanner.className = 'frozen-day-header';
+    dayBanner.innerHTML = `<span class="day-badge">${dayName}</span> Today's Frozen Prep <span class="auto-badge">✓ Auto-filled</span>`;
+    block.appendChild(dayBanner);
+
+    const table = document.createElement('table');
+    table.className = 'prep-table';
+    table.innerHTML = `<thead><tr>
+      <th style="width:35%">Item</th>
+      <th style="width:60px">Qty</th>
+      <th style="width:80px">Assigned</th>
+      <th style="width:60px">Est. Min</th>
+      <th style="width:52px">Initials</th>
+      <th>Notes</th>
+    </tr></thead>`;
+    const tbody = document.createElement('tbody');
+
+    frozenForToday.forEach(frozenItem => {
+      // Find matching db item
+      const dbItem = dbFrozenItems.find(i => i.name.toLowerCase().trim() === frozenItem.name.toLowerCase().trim());
+      const itemId = dbItem ? dbItem.id : ('frozen_' + frozenItem.name.replace(/\s+/g,'_'));
+      const asgn = assignments[itemId] || {};
+      // Auto-fill qty=1 if not already set
+      const qty = asgn.qty != null ? asgn.qty : 1;
+      const mins = dbItem ? calcItemMins(dbItem, parseFloat(qty)||0) : frozenItem.mins;
+      const isAutoFilled = asgn.qty == null; // not yet overridden
+      const hasQty = parseFloat(qty) > 0;
+
+      const tr = document.createElement('tr');
+      tr.dataset.itemId = itemId;
+      if (!hasQty) tr.classList.add('prep-row-noqty');
+
+      tr.innerHTML = `
+        <td class="item-name">${escHtml(frozenItem.name)}</td>
+        <td><input class="qty-input${isAutoFilled?' auto-filled':''}" type="number" min="0" value="${qty}" data-id="${escHtml(itemId)}" onchange="onQtyChange(this)" oninput="onQtyChange(this)" /></td>
+        <td><select class="assign-select" data-id="${escHtml(itemId)}" onchange="onAssignChange(this)">
+          <option value="">—</option>
+          ${staff.map(s=>`<option value="${escHtml(s.name)}"${asgn.assigned_to===s.name?' selected':''}>${escHtml(s.name)}</option>`).join('')}
+        </select></td>
+        <td class="item-time${mins>0?' active':''}" id="time-${itemId}">${mins > 0 ? mins + ' min' : ''}</td>
+        <td><input class="initials-input" type="text" value="${escHtml(asgn.initials||'')}" data-id="${escHtml(itemId)}" onchange="onFieldChange(this,'initials')" /></td>
+        <td><input class="notes-input" type="text" value="${escHtml(asgn.notes||'')}" data-id="${escHtml(itemId)}" onchange="onFieldChange(this,'notes')" /></td>
+      `;
+      tbody.appendChild(tr);
+
+      // Pre-seed assignment so it saves properly
+      if (asgn.qty == null && !assignments[itemId]) {
+        assignments[itemId] = { qty: 1, assigned_to: '', initials: '', notes: '' };
+      }
+    });
+
+    table.appendChild(tbody);
+    block.appendChild(table);
+  }
+
+  // Show remaining DB frozen items not in today's auto-list, grouped by day
+  const todayNames = frozenForToday.map(f => f.name.toLowerCase().trim());
+  const otherDbItems = dbFrozenItems.filter(i => !todayNames.includes(i.name.toLowerCase().trim()));
+
+  if (otherDbItems.length > 0) {
+    // Group by day using FROZEN_ITEMS_BY_DAY lookup
+    const itemDayMap = {};
+    Object.entries(FROZEN_ITEMS_BY_DAY).forEach(([day, items]) => {
+      items.forEach(fi => { itemDayMap[fi.name.toLowerCase().trim()] = day; });
+    });
+
+    const byDay = {};
+    otherDbItems.forEach(item => {
+      const day = itemDayMap[item.name.toLowerCase().trim()] || 'Other';
+      if (!byDay[day]) byDay[day] = [];
+      byDay[day].push(item);
+    });
+
+    allDays.concat(['Other']).forEach(day => {
+      const dayItems = byDay[day];
+      if (!dayItems || dayItems.length === 0) return;
+
+      const dayBanner = document.createElement('div');
+      dayBanner.className = 'frozen-day-header';
+      dayBanner.innerHTML = `<span class="day-badge">${day}</span>`;
+      block.appendChild(dayBanner);
+
+      const table = document.createElement('table');
+      table.className = 'prep-table';
+      table.innerHTML = `<thead><tr>
+        <th style="width:35%">Item</th>
+        <th style="width:60px">Qty</th>
+        <th style="width:80px">Assigned</th>
+        <th style="width:60px">Est. Min</th>
+        <th style="width:52px">Initials</th>
+        <th>Notes</th>
+      </tr></thead>`;
+      const tbody = document.createElement('tbody');
+
+      dayItems.forEach(item => {
+        const asgn = assignments[item.id] || {};
+        const qty = asgn.qty != null ? asgn.qty : '';
+        const mins = calcItemMins(item, parseFloat(qty)||0);
+        const hasQty = qty !== '' && parseFloat(qty) > 0;
+
+        const tr = document.createElement('tr');
+        tr.dataset.itemId = item.id;
+        if (!hasQty) tr.classList.add('prep-row-noqty');
+
+        tr.innerHTML = `
+          <td class="item-name">${escHtml(item.name)}</td>
+          <td><input class="qty-input" type="number" min="0" value="${escHtml(qty)}" data-id="${item.id}" onchange="onQtyChange(this)" oninput="onQtyChange(this)" /></td>
+          <td><select class="assign-select" data-id="${item.id}" onchange="onAssignChange(this)">
+            <option value="">—</option>
+            ${staff.map(s=>`<option value="${escHtml(s.name)}"${asgn.assigned_to===s.name?' selected':''}>${escHtml(s.name)}</option>`).join('')}
+          </select></td>
+          <td class="item-time${mins>0?' active':''}" id="time-${item.id}">${mins > 0 ? mins + ' min' : ''}</td>
+          <td><input class="initials-input" type="text" value="${escHtml(asgn.initials||'')}" data-id="${item.id}" onchange="onFieldChange(this,'initials')" /></td>
+          <td><input class="notes-input" type="text" value="${escHtml(asgn.notes||'')}" data-id="${escHtml(item.id)}" onchange="onFieldChange(this,'notes')" /></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      block.appendChild(table);
+    });
+  }
+
+  if (frozenForToday.length === 0 && dbFrozenItems.length === 0) {
+    block.innerHTML += '<div class="empty-state">No frozen items configured.</div>';
+  }
+
+  container.appendChild(block);
+  updateSectionCount('Frozen prep');
+}
+
+// ============================================================
+// CALCULATIONS
+// ============================================================
 function calcItemMins(item, qty) {
   if (!qty) return 0;
   const base = item.mins || 0;
@@ -613,409 +1066,302 @@ function calcItemMins(item, qty) {
   return base;
 }
 
-function renderDaily() {
-  const secs = {};
-  SECTIONS.forEach(s => secs[s] = []);
-  items.forEach(item => {
-    if (!secs[item.section]) secs[item.section] = [];
-    secs[item.section].push(item);
+function updateSectionCount(section) {
+  const id = 'sec-count-' + section;
+  const el = document.getElementById(id);
+  if (!el) return;
+  // Count rows with qty > 0 in this section
+  const block = el.closest('.section-block');
+  if (!block) return;
+  const rows = block.querySelectorAll('tr[data-item-id]');
+  let count = 0;
+  rows.forEach(r => {
+    const inp = r.querySelector('.qty-input');
+    if (inp && parseFloat(inp.value) > 0) count++;
   });
+  el.textContent = count > 0 ? count + ' items' : '';
+}
 
-  let html = '', totalItems = 0, assignedItems = 0, totalMins = 0;
+function updateSummary() {
+  let totalItems = 0, totalAssigned = 0, totalMins = fixedBoh || 0;
 
-  SECTIONS.forEach(sec => {
-    const secItems = secs[sec] || [];
-    if (!secItems.length) return;
-    let secMins = 0;
-    secItems.forEach(item => {
-      const a = todayAssignments[item.id] || {};
-      secMins += calcItemMins(item, parseFloat(a.qty) || 0);
-    });
-    const collapsed = collapsedSections.has(sec);
-    const secId = 'sec-' + sec.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-    html += `<div class="section-header" onclick="toggleSection('${sec.replace(/'/g,"\\'")}','${secId}')">
-      <h3>${sec}</h3>
-      <span class="section-time">${secMins ? Math.round(secMins) + ' min est.' : ''}</span>
-      <span class="section-toggle">${collapsed ? '▼ show' : '▲ hide'}</span>
-    </div>
-    <div id="${secId}" style="${collapsed ? 'display:none' : ''}">
-    <table class="prep-table">
-      <colgroup><col style="width:30%"><col style="width:9%"><col style="width:16%"><col style="width:11%"><col style="width:14%"><col style="width:20%"></colgroup>
-      <thead><tr><th>Item</th><th>Qty</th><th>Assigned to</th><th>Est. time</th><th>Initials</th><th>Notes</th></tr></thead>
-      <tbody>`;
-
-    secItems.forEach(item => {
+  // Regular sections
+  prepItems.forEach(item => {
+    const asgn = assignments[item.id];
+    if (!asgn) return;
+    const qty = parseFloat(asgn.qty) || 0;
+    if (qty > 0) {
       totalItems++;
-      const a = todayAssignments[item.id] || {};
-      const qty = parseFloat(a.qty) || 0;
-      if (a.assigned_to) assignedItems++;
-      const mins = calcItemMins(item, qty);
-      totalMins += mins;
-      const staffOpts = staff.map(s =>
-        `<option value="${s.name}" ${a.assigned_to === s.name ? 'selected' : ''}>${s.name}</option>`
-      ).join('');
-      html += `<tr>
-        <td style="font-size:13px">${item.name}</td>
-        <td><input type="number" min="0" step="1" value="${a.qty || ''}" placeholder="0"
-          onchange="queueAssignment('${item.id}','qty',this.value)"></td>
-        <td><select onchange="queueAssignment('${item.id}','assigned_to',this.value)">
-          <option value="">— assign —</option>${staffOpts}</select></td>
-        <td class="time-cell">${mins ? Math.round(mins) + ' min' : '—'}</td>
-        <td><input type="text" value="${(a.initials || '').replace(/"/g, '&quot;')}"
-          style="width:80px" onchange="queueAssignment('${item.id}','initials',this.value)"></td>
-        <td><input type="text" value="${(a.notes || '').replace(/"/g, '&quot;')}"
-          onchange="queueAssignment('${item.id}','notes',this.value)"></td>
-      </tr>`;
-    });
-
-    html += '</tbody></table></div>';
+      if (asgn.assigned_to) totalAssigned++;
+      totalMins += calcItemMins(item, qty);
+    }
   });
 
-  document.getElementById('prepSections').innerHTML = html;
-  document.getElementById('m-items').textContent = totalItems;
-  document.getElementById('m-assigned').textContent = assignedItems;
-  const estHrs = (totalMins + FIXED_BOH_MINS) / 60;
-  document.getElementById('m-hours').textContent = estHrs.toFixed(1);
-  updateDelta(estHrs);
-}
-
-function toggleSection(sec, secId) {
-  if (collapsedSections.has(sec)) collapsedSections.delete(sec);
-  else collapsedSections.add(sec);
-  renderDaily();
-}
-
-function updateDelta(estHrs) {
-  const delta = document.getElementById('m-delta');
-  if (!scheduledHours) { delta.textContent = '—'; delta.className = 'value'; return; }
-  const diff = estHrs - parseFloat(scheduledHours);
-  if (Math.abs(diff) < 0.05) { delta.textContent = 'On target'; delta.className = 'value'; }
-  else if (diff > 0) { delta.textContent = '+' + diff.toFixed(1) + ' hrs'; delta.className = 'value warn'; }
-  else { delta.textContent = Math.abs(diff).toFixed(1) + ' hrs under'; delta.className = 'value good'; }
-}
-
-// ── Assignments (debounced auto-save) ─────────────────────────────────────────
-function queueAssignment(itemId, field, value) {
-  if (!todayAssignments[itemId]) todayAssignments[itemId] = { item_id: itemId, prep_date: activeDate };
-  todayAssignments[itemId][field] = value;
-  // Update totals immediately
-  let totalMins = 0, assignedItems = 0;
-  items.forEach(item => {
-    const a = todayAssignments[item.id] || {};
-    if (a.assigned_to) assignedItems++;
-    totalMins += calcItemMins(item, parseFloat(a.qty) || 0);
+  // Frozen items (today's auto-fill + any manually entered)
+  const dayName = getDayName(currentDate);
+  const frozenForToday = FROZEN_ITEMS_BY_DAY[dayName] || [];
+  frozenForToday.forEach(fi => {
+    const itemId = 'frozen_' + fi.name.replace(/\s+/g,'_');
+    const dbItem = prepItems.find(i => i.section==='Frozen prep' && i.name.toLowerCase().trim()===fi.name.toLowerCase().trim());
+    const realId = dbItem ? dbItem.id : itemId;
+    const asgn = assignments[realId];
+    const qty = asgn ? (parseFloat(asgn.qty)||0) : 1;
+    if (qty > 0) {
+      totalItems++;
+      if (asgn && asgn.assigned_to) totalAssigned++;
+      totalMins += dbItem ? calcItemMins(dbItem, qty) : fi.mins;
+    }
   });
-  document.getElementById('m-assigned').textContent = assignedItems;
-  const estHrs = (totalMins + FIXED_BOH_MINS) / 60;
-  document.getElementById('m-hours').textContent = estHrs.toFixed(1);
-  updateDelta(estHrs);
-  // Debounce DB write
-  clearTimeout(pendingSaves[itemId]);
-  pendingSaves[itemId] = setTimeout(() => persistAssignment(itemId), 800);
+
+  const estHours = (totalMins / 60).toFixed(1);
+  document.getElementById('sum-items').textContent = totalItems;
+  document.getElementById('sum-assigned').textContent = totalAssigned;
+  document.getElementById('sum-hours').textContent = estHours;
+
+  const sched = schedHours != null ? parseFloat(schedHours) : null;
+  document.getElementById('sum-sched').textContent = sched != null ? sched : '—';
+
+  const deltaWrap = document.getElementById('sum-delta-wrap');
+  const deltaEl = document.getElementById('sum-delta');
+  if (sched != null) {
+    const delta = parseFloat(estHours) - sched;
+    deltaEl.textContent = (delta > 0 ? '+' : '') + delta.toFixed(1) + ' hrs';
+    deltaWrap.className = 'summary-item ' + (delta > 0 ? 'over' : 'under');
+  } else {
+    deltaEl.textContent = '—';
+    deltaWrap.className = 'summary-item';
+  }
 }
 
-async function persistAssignment(itemId) {
-  const a = todayAssignments[itemId];
-  if (!a) return;
-  try {
-    await sbUpsert('prep_assignments', {
-      prep_date: activeDate,
-      item_id: itemId,
-      qty: a.qty ? parseFloat(a.qty) : null,
-      assigned_to: a.assigned_to || null,
-      initials: a.initials || null,
-      notes: a.notes || null
-    });
-  } catch(e) { toast('Auto-save failed: ' + e.message, true); }
+// ============================================================
+// INPUT HANDLERS
+// ============================================================
+function onQtyChange(el) {
+  const id = el.dataset.id;
+  const qty = parseFloat(el.value) || 0;
+  if (!assignments[id]) assignments[id] = {};
+  assignments[id].qty = qty > 0 ? qty : null;
+
+  // Remove auto-filled styling once manually changed
+  el.classList.remove('auto-filled');
+
+  // Update time display
+  const dbItem = prepItems.find(i => i.id == id);
+  const timeEl = document.getElementById('time-' + id);
+  if (timeEl) {
+    const mins = dbItem ? calcItemMins(dbItem, qty) : 0;
+    timeEl.textContent = mins > 0 ? mins + ' min' : '';
+    timeEl.className = 'item-time' + (mins > 0 ? ' active' : '');
+  }
+
+  // Toggle no-qty class for print
+  const tr = el.closest('tr');
+  if (tr) {
+    if (qty > 0) tr.classList.remove('prep-row-noqty');
+    else tr.classList.add('prep-row-noqty');
+  }
+
+  updateSectionCount(el.closest('.section-block')?.dataset?.section || '');
+  updateSummary();
+  triggerAutoSave();
 }
 
-async function saveScheduledHours(val) {
-  scheduledHours = val ? parseFloat(val) : null;
-  const estHrs = parseFloat(document.getElementById('m-hours').textContent) || 0;
-  updateDelta(estHrs);
+function onAssignChange(el) {
+  const id = el.dataset.id;
+  if (!assignments[id]) assignments[id] = {};
+  assignments[id].assigned_to = el.value;
+  updateSummary();
+  triggerAutoSave();
+}
+
+function onFieldChange(el, field) {
+  const id = el.dataset.id;
+  if (!assignments[id]) assignments[id] = {};
+  assignments[id][field] = el.value;
+  triggerAutoSave();
+}
+
+// ============================================================
+// AUTO-SAVE
+// ============================================================
+function triggerAutoSave() {
+  clearTimeout(saveDebounce);
+  setStatus('saving', '⏳ Saving...');
+  saveDebounce = setTimeout(autoSave, 800);
+}
+
+async function autoSave() {
   try {
-    await sbUpsert('prep_days', { prep_date: activeDate, scheduled_hours: scheduledHours });
-  } catch(e) { toast('Could not save scheduled hours', true); }
+    await upsertAssignments();
+    await upsertPrepDay(false);
+    setStatus('saved', '✓ Saved');
+    setTimeout(() => setStatus('', ''), 2000);
+  } catch(e) {
+    setStatus('error', '⚠ Save error');
+  }
 }
 
 async function saveDay() {
-  const btn = document.getElementById('saveBtn');
-  btn.disabled = true;
-  // Flush any pending debounced saves first
-  await Promise.all(Object.keys(pendingSaves).map(id => {
-    clearTimeout(pendingSaves[id]);
-    return persistAssignment(id);
-  }));
-  pendingSaves = {};
+  showLoading(true);
   try {
-    await sbUpsert('prep_days', {
-      prep_date: activeDate,
-      scheduled_hours: scheduledHours,
-      saved_at: new Date().toISOString()
-    });
-    await loadArchiveDates();
-    buildDateSelect();
-    toast('List saved successfully');
-    document.getElementById('saveMsg').textContent = 'Saved at ' + new Date().toLocaleTimeString();
-    setTimeout(() => document.getElementById('saveMsg').textContent = '', 4000);
-  } catch(e) { toast('Save failed: ' + e.message, true); }
-  btn.disabled = false;
-}
-
-// ── Archive ────────────────────────────────────────────────────────────────────
-async function renderArchive() {
-  const saved = archiveDays.filter(d => d.saved_at);
-  if (!saved.length) {
-    document.getElementById('archiveList').innerHTML = '<p style="color:var(--text2);font-size:13px">No saved lists yet. Use "Save this list" on the daily prep tab.</p>';
-    return;
+    await upsertAssignments();
+    await upsertPrepDay(true);
+    document.getElementById('save-btn').disabled = true;
+    setStatus('saved', '✅ Saved ' + new Date().toLocaleString());
+    showToast('List saved!');
+    await loadArchive();
+  } catch(e) {
+    setStatus('error', '⚠ Save error');
   }
-  document.getElementById('archiveList').innerHTML = saved.map(day => {
-    const est = '—';
-    const sched = day.scheduled_hours;
-    const d = new Date(day.prep_date + 'T12:00:00');
-    const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    return `<div class="archive-entry" onclick="loadArchiveDetail('${day.prep_date}')">
-      <div class="ae-date">${label}</div>
-      <div class="ae-meta">Saved list${sched ? ' · ' + sched + ' hrs scheduled' : ''}</div>
-    </div>
-    <div id="ad-${day.prep_date}" class="archive-detail"></div>`;
-  }).join('');
+  showLoading(false);
 }
 
-async function loadArchiveDetail(date) {
-  const el = document.getElementById('ad-' + date);
-  if (el.style.display === 'block') { el.style.display = 'none'; return; }
-  el.style.display = 'block';
-  el.innerHTML = '<p style="font-size:12px;color:var(--text2);padding:8px">Loading...</p>';
-  try {
-    const [assignRows, dayRows] = await Promise.all([
-      sbGet(`prep_assignments?prep_date=eq.${date}&select=*`),
-      sbGet(`prep_days?prep_date=eq.${date}&select=*`)
-    ]);
-    const aMap = {};
-    (assignRows || []).forEach(a => aMap[a.item_id] = a);
-    const day = dayRows && dayRows[0];
-    let totalMins = 0, filled = 0;
-    items.forEach(item => {
-      const a = aMap[item.id] || {};
-      if (a.assigned_to) filled++;
-      totalMins += calcItemMins(item, parseFloat(a.qty) || 0);
+async function upsertAssignments() {
+  const records = [];
+  Object.entries(assignments).forEach(([itemId, asgn]) => {
+    // Skip items with no useful data
+    if (!asgn.qty && !asgn.assigned_to && !asgn.initials && !asgn.notes) return;
+    records.push({
+      prep_date: currentDate,
+      item_id: isNaN(parseInt(itemId)) ? null : parseInt(itemId),
+      qty: asgn.qty || null,
+      assigned_to: asgn.assigned_to || null,
+      initials: asgn.initials || null,
+      notes: asgn.notes || null,
     });
-    const estHrs = (totalMins / 60).toFixed(1);
-    const sched = day && day.scheduled_hours;
-    let deltaStr = '';
-    if (sched) {
-      const diff = parseFloat(estHrs) - sched;
-      if (Math.abs(diff) < 0.05) deltaStr = '<span class="ae-badge ae-ok">On target</span>';
-      else if (diff > 0) deltaStr = `<span class="ae-badge ae-over">+${diff.toFixed(1)} hrs over</span>`;
-      else deltaStr = `<span class="ae-badge ae-under">${Math.abs(diff).toFixed(1)} hrs under</span>`;
-    }
-    let html = `<div style="display:flex;gap:16px;font-size:12px;color:var(--text2);padding:8px 8px 4px;flex-wrap:wrap">
-      <span>${filled}/${items.length} items assigned</span>
-      <span>${estHrs} hrs estimated</span>
-      ${sched ? `<span>${sched} hrs scheduled</span>` : ''}
-      ${deltaStr}
-    </div>
-    <table><thead><tr><th>Item</th><th>Qty</th><th>Assigned to</th><th>Est. time</th><th>Initials</th><th>Notes</th></tr></thead><tbody>`;
-    items.forEach(item => {
-      const a = aMap[item.id] || {};
-      const mins = calcItemMins(item, parseFloat(a.qty) || 0);
-      html += `<tr><td>${item.name}</td><td>${a.qty || '—'}</td><td>${a.assigned_to || '—'}</td><td>${mins ? Math.round(mins) + ' min' : '—'}</td><td>${a.initials || '—'}</td><td>${a.notes || ''}</td></tr>`;
+  });
+  if (records.length === 0) return;
+  // Delete existing then re-insert
+  await supa('prep_assignments?prep_date=eq.'+currentDate, { method:'DELETE' });
+  if (records.length > 0) {
+    await supa('prep_assignments', {
+      method:'POST',
+      headers:{'Prefer':'resolution=merge-duplicates'},
+      body: JSON.stringify(records)
     });
-    html += '</tbody></table>';
-    el.innerHTML = html;
-  } catch(e) { el.innerHTML = '<p style="color:var(--danger-text);font-size:12px;padding:8px">Error loading: ' + e.message + '</p>'; }
+  }
 }
 
-// ── Settings ───────────────────────────────────────────────────────────────────
-function renderSettings() {
-  document.getElementById('restNameInput').value = REST_NAME;
-  document.getElementById('fixedBohInput').value = FIXED_BOH_MINS || '';
-  document.getElementById('staffList').innerHTML = staff.length
-    ? staff.map(s => `<div class="list-item"><span>${s.name}</span><button class="danger" onclick="removeStaff('${s.id}')">Remove</button></div>`).join('')
-    : '<p style="font-size:12px;color:var(--text2)">No staff added yet.</p>';
-
-  document.getElementById('filterSection').innerHTML =
-    '<option value="">All sections</option>' + SECTIONS.map(s => `<option value="${s}">${s}</option>`).join('');
-  document.getElementById('newItemSection').innerHTML =
-    SECTIONS.map(s => `<option value="${s}">${s}</option>`).join('');
-  renderItemSettings();
-}
-
-function renderItemSettings() {
-  const filter = document.getElementById('filterSection').value;
-  const filtered = filter ? items.filter(i => i.section === filter) : items;
-  const container = document.getElementById('itemsList');
-  container.innerHTML = filtered.length
-    ? filtered.map(item => `<div class="item-edit-row" draggable="true" data-id="${item.id}" style="cursor:grab">
-        <span style="color:var(--text3);font-size:14px;padding:0 4px;cursor:grab;flex-shrink:0">⠿</span>
-        <input type="text" value="${item.name.replace(/"/g,'&quot;')}" onchange="updateItem('${item.id}','name',this.value)" style="flex:3;min-width:0">
-        <select onchange="updateItem('${item.id}','section',this.value)" style="flex:1.5;min-width:0">
-          ${SECTIONS.map(s => `<option value="${s}" ${s === item.section ? 'selected' : ''}>${s}</option>`).join('')}
-        </select>
-        <input type="number" value="${item.mins}" onchange="updateItem('${item.id}','mins',this.value)" style="flex:0 0 72px" title="Base time in minutes">
-        <input type="number" value="${item.unit_qty ?? ''}" placeholder="—" onchange="updateItem('${item.id}','unit_qty',this.value)" style="flex:0 0 72px" title="Step qty: if daily qty exceeds this, time is multiplied by 1.3">
-        <button class="danger" onclick="removeItem('${item.id}')">✕</button>
-      </div>`).join('')
-    : '<p style="font-size:12px;color:var(--text2);padding:8px 0">No items.</p>';
-  initDragSort(container, filtered);
-}
-
-let dragSrc = null;
-function initDragSort(container, filtered) {
-  container.querySelectorAll('.item-edit-row').forEach(row => {
-    row.addEventListener('dragstart', e => {
-      dragSrc = row;
-      e.dataTransfer.effectAllowed = 'move';
-      setTimeout(() => row.style.opacity = '0.4', 0);
-    });
-    row.addEventListener('dragend', () => { row.style.opacity = ''; });
-    row.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
-    row.addEventListener('dragenter', e => { e.preventDefault(); row.style.background = 'var(--info-bg)'; });
-    row.addEventListener('dragleave', () => { row.style.background = ''; });
-    row.addEventListener('drop', async e => {
-      e.preventDefault();
-      row.style.background = '';
-      if (dragSrc === row) return;
-      const allRows = [...container.querySelectorAll('.item-edit-row')];
-      const srcIdx = allRows.indexOf(dragSrc);
-      const dstIdx = allRows.indexOf(row);
-      if (srcIdx < dstIdx) row.after(dragSrc); else row.before(dragSrc);
-      // Reorder items array and save sort_order
-      const filter = document.getElementById('filterSection').value;
-      const newOrder = [...container.querySelectorAll('.item-edit-row')].map(r => r.dataset.id);
-      if (filter) {
-        // Only reorder within filtered subset; preserve positions of other items
-        const filteredIds = new Set(filtered.map(i => i.id));
-        let fi = 0;
-        items.forEach((item, idx) => {
-          if (filteredIds.has(item.id)) { items[idx] = items.find(i => i.id === newOrder[fi++]); }
-        });
-      } else {
-        const idMap = Object.fromEntries(items.map(i => [i.id, i]));
-        newOrder.forEach((id, idx) => { items[idx] = idMap[id]; });
-      }
-      items.forEach((item, idx) => item.sort_order = idx);
-      toast('Saving order...');
-      try {
-        await Promise.all(items.map(item => sbPatch(`prep_items?id=eq.${item.id}`, { sort_order: item.sort_order })));
-        toast('Order saved');
-        renderDaily();
-      } catch(e) { toast('Could not save order', true); }
-    });
+async function upsertPrepDay(lock) {
+  const body = {
+    prep_date: currentDate,
+    scheduled_hours: schedHours || null,
+    ...(lock ? { saved_at: new Date().toISOString() } : {}),
+  };
+  await supa('prep_days', {
+    method:'POST',
+    headers:{'Prefer':'resolution=merge-duplicates'},
+    body: JSON.stringify(body)
   });
 }
 
-async function saveRestName() {
-  const name = document.getElementById('restNameInput').value.trim();
-  if (!name) return;
-  REST_NAME = name;
-  localStorage.setItem('rest_name', name);
-  document.getElementById('appTitle').textContent = name;
-  toast('Restaurant name saved');
+async function saveSchedHours() {
+  schedHours = parseFloat(document.getElementById('sched-hours').value) || null;
+  updateSummary();
+  triggerAutoSave();
 }
 
-async function saveFixedBoh() {
-  const val = parseInt(document.getElementById('fixedBohInput').value) || 0;
-  FIXED_BOH_MINS = val;
-  localStorage.setItem('fixed_boh_mins', val);
-  const msg = document.getElementById('fixedBohMsg');
-  msg.style.display = 'block';
-  setTimeout(() => msg.style.display = 'none', 2000);
-  renderDaily();
+// ============================================================
+// ARCHIVE
+// ============================================================
+async function loadArchive() {
+  const r = await supa('prep_days?select=prep_date,scheduled_hours,saved_at&order=prep_date.desc&limit=60');
+  const days = await r.json();
+  const list = document.getElementById('archive-list');
+  if (!days || days.length === 0) {
+    list.innerHTML = '<div class="empty-state">No archived days yet.</div>';
+    return;
+  }
+  list.innerHTML = days.map((day, i) => `
+    <div class="archive-card">
+      <div class="archive-card-header" onclick="toggleArchive(${i})">
+        <div>
+          <div class="archive-date">${fmtDateDisplay(new Date(day.prep_date+'T12:00:00'))}</div>
+          <div class="archive-meta">Scheduled: ${day.scheduled_hours || '—'} hrs</div>
+        </div>
+        <span class="archive-badge ${day.saved_at ? 'badge-saved' : 'badge-draft'}">${day.saved_at ? 'Saved' : 'Draft'}</span>
+      </div>
+      <div class="archive-detail" id="archive-detail-${i}" data-date="${day.prep_date}"></div>
+    </div>
+  `).join('');
 }
 
-async function addStaff() {
-  const name = document.getElementById('newStaff').value.trim();
-  if (!name) return;
-  try {
-    const rows = await sbPost('staff', { name });
-    staff.push(rows[0]);
-    staff.sort((a,b) => a.name.localeCompare(b.name));
-    document.getElementById('newStaff').value = '';
-    renderSettings();
-    renderDaily();
-  } catch(e) { toast('Could not add staff: ' + e.message, true); }
+async function toggleArchive(i) {
+  const detail = document.getElementById('archive-detail-' + i);
+  if (detail.classList.contains('open')) {
+    detail.classList.remove('open');
+    return;
+  }
+  if (!detail.dataset.loaded) {
+    const date = detail.dataset.date;
+    const r = await supa('prep_assignments?prep_date=eq.'+date+'&select=item_id,qty,assigned_to,initials,notes');
+    const rows = await r.json();
+    if (!rows || rows.length === 0) {
+      detail.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No items recorded.</div>';
+    } else {
+      const bySection = {};
+      rows.forEach(row => {
+        if (!row.qty || row.qty <= 0) return;
+        const item = prepItems.find(i => i.id === row.item_id);
+        const section = item ? item.section : 'Other';
+        if (!bySection[section]) bySection[section] = [];
+        bySection[section].push({ ...row, itemName: item ? item.name : 'Item #'+row.item_id });
+      });
+      detail.innerHTML = Object.entries(bySection).map(([sec, items]) => `
+        <div class="archive-section-name">${sec}</div>
+        ${items.map(row => `
+          <div class="archive-item-row">
+            <span style="flex:1">${escHtml(row.itemName)}</span>
+            <span style="width:40px;text-align:center;font-weight:600">${row.qty}</span>
+            <span style="width:100px;color:var(--text-muted)">${row.assigned_to||''}</span>
+            <span style="width:50px;color:var(--text-muted)">${row.initials||''}</span>
+            <span style="flex:1;color:var(--text-muted)">${row.notes||''}</span>
+          </div>
+        `).join('')}
+      `).join('');
+    }
+    detail.dataset.loaded = '1';
+  }
+  detail.classList.add('open');
 }
 
-async function removeStaff(id) {
-  if (!confirm('Remove this staff member?')) return;
-  try {
-    await sbDelete(`staff?id=eq.${id}`);
-    staff = staff.filter(s => s.id !== id);
-    renderSettings();
-    renderDaily();
-  } catch(e) { toast('Could not remove staff', true); }
+// ============================================================
+// UI HELPERS
+// ============================================================
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
 }
 
-async function updateItem(id, field, val) {
-  const item = items.find(i => i.id === id);
-  if (!item) return;
-  item[field] = (field === 'mins' || field === 'unit_qty' || field === 'step_qty') ? (parseFloat(val) || null) : val;
-  clearTimeout(item._saveTimer);
-  item._saveTimer = setTimeout(async () => {
-    try { await sbPatch(`prep_items?id=eq.${id}`, { [field]: item[field] }); }
-    catch(e) { toast('Could not save item change', true); }
-  }, 800);
+function showLoading(show) {
+  document.getElementById('loading').classList.toggle('hidden', !show);
 }
 
-async function addItem() {
-  const name = document.getElementById('newItemName').value.trim();
-  const section = document.getElementById('newItemSection').value;
-  const mins = parseFloat(document.getElementById('newItemTime').value) || 10;
-  const unit_qty = parseFloat(document.getElementById('newItemUnit').value) || null;
-  if (!name) return;
-  try {
-    const rows = await sbPost('prep_items', { name, section, mins, unit_qty, sort_order: items.length });
-    items.push(rows[0]);
-    document.getElementById('newItemName').value = '';
-    document.getElementById('newItemTime').value = '';
-    document.getElementById('newItemUnit').value = '';
-    renderItemSettings();
-    renderDaily();
-    toast('Item added');
-  } catch(e) { toast('Could not add item: ' + e.message, true); }
-}
-
-async function removeItem(id) {
-  if (!confirm('Remove this prep item? This will also remove all historical assignments for it.')) return;
-  try {
-    await sbDelete(`prep_items?id=eq.${id}`);
-    items = items.filter(i => i.id !== id);
-    renderItemSettings();
-    renderDaily();
-  } catch(e) { toast('Could not remove item', true); }
-}
-
-// ── Print ──────────────────────────────────────────────────────────────────────
-function printView() {
-  document.getElementById('printRestName').textContent = REST_NAME;
-  document.getElementById('printDateLine').textContent = 'Prep list for: ' + formatDateLabel(activeDate);
-  const sched = scheduledHours ? scheduledHours + ' hrs scheduled' : '';
-  const est = document.getElementById('m-hours').textContent + ' hrs estimated';
-  const fixedStr = FIXED_BOH_MINS ? `includes ${FIXED_BOH_MINS} min fixed BOH time` : '';
-  document.getElementById('printMeta').textContent = [est, sched, fixedStr].filter(Boolean).join(' · ');
-  window.print();
-}
-
-// ── Utilities ──────────────────────────────────────────────────────────────────
-function toast(msg, isErr) {
-  const el = document.getElementById('toast');
+function setStatus(cls, msg) {
+  const el = document.getElementById('save-status');
+  el.className = 'save-status ' + cls;
   el.textContent = msg;
-  el.style.background = isErr ? '#a32d2d' : '#1a1a18';
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 3000);
 }
 
-let loadingMsg = null;
-function showLoading(msg) {
-  document.getElementById('loading').classList.remove('hidden');
-  document.querySelector('#loading p').textContent = msg || 'Loading...';
-}
-function hideLoading() {
-  document.getElementById('loading').classList.add('hidden');
+let toastTimer;
+function showToast(msg, dur=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), dur);
 }
 
+function escHtml(str) {
+  if (str == null) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============================================================
+// START
+// ============================================================
 init();
 </script>
 </body>
