@@ -19,6 +19,8 @@
     --yellow-light: #fef7e8;
     --blue: #2563a8;
     --blue-light: #e8f0fc;
+    --purple: #6b21a8;
+    --purple-light: #f3e8ff;
     --shadow: 0 1px 3px rgba(0,0,0,0.08);
     --radius: 8px;
     --font: 'Georgia', serif;
@@ -41,16 +43,17 @@
   .btn-primary:hover { background:#a8401f; }
 
   /* HEADER */
-  header { background:var(--card); border-bottom:2px solid var(--accent); padding:0 20px; display:flex; align-items:center; gap:16px; height:56px; position:sticky; top:0; z-index:100; }
+  header { background:var(--card); border-bottom:2px solid var(--accent); padding:0 16px; display:flex; align-items:center; gap:12px; height:56px; position:sticky; top:0; z-index:100; }
   .header-logo { font-family:var(--font); font-size:18px; font-weight:bold; color:var(--accent); white-space:nowrap; }
   .header-rest { font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
-  nav { display:flex; gap:4px; margin-left:auto; }
-  nav button { background:none; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-size:13px; font-family:var(--font-ui); color:var(--text-muted); font-weight:600; transition:all .15s; }
+  nav { display:flex; gap:2px; margin-left:auto; flex-wrap:wrap; }
+  nav button { background:none; border:none; padding:7px 11px; border-radius:6px; cursor:pointer; font-size:12px; font-family:var(--font-ui); color:var(--text-muted); font-weight:600; transition:all .15s; white-space:nowrap; }
   nav button.active { background:var(--accent-light); color:var(--accent); }
   nav button:hover:not(.active) { background:var(--bg); }
+  .notif-badge { display:inline-block; background:var(--accent); color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; margin-left:3px; vertical-align:middle; }
 
   /* TABS */
-  .tab { display:none; padding:20px; max-width:960px; margin:0 auto; }
+  .tab { display:none; padding:20px; max-width:980px; margin:0 auto; }
   .tab.active { display:block; }
 
   /* SUMMARY BAR */
@@ -69,21 +72,24 @@
   .date-row label { font-size:12px; color:var(--text-muted); font-weight:600; }
   .date-row .spacer { flex:1; }
 
-  /* SECTION FILTER */
-  .section-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
-  .section-filter button { padding:5px 12px; border:1px solid var(--border); border-radius:20px; font-size:12px; font-family:var(--font-ui); cursor:pointer; background:var(--card); color:var(--text-muted); transition:all .15s; }
-  .section-filter button.active { background:var(--accent); color:#fff; border-color:var(--accent); }
-
   /* SECTION BLOCKS */
   .section-block { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:14px; overflow:hidden; }
   .section-header { background:var(--text); color:#fff; padding:10px 16px; font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
   .section-header .sec-count { font-size:11px; background:rgba(255,255,255,.2); padding:2px 8px; border-radius:10px; font-weight:400; }
   .section-header.frozen { background:#1e5a8a; }
+  .section-header.catering-hdr { background:#5b2d8e; }
 
   /* FROZEN DAY SUB-HEADERS */
   .frozen-day-header { background:#e8f0fc; border-bottom:1px solid #c8d8f0; padding:7px 16px; font-size:12px; font-weight:700; color:#2563a8; letter-spacing:.05em; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
   .frozen-day-header .day-badge { background:#2563a8; color:#fff; padding:2px 8px; border-radius:10px; font-size:10px; }
   .frozen-day-header .auto-badge { background:#e8f5ee; color:#2e7d52; border:1px solid #a8ddc0; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
+
+  /* CATERING SUB-HEADER */
+  .catering-order-header { background:#f3e8ff; border-bottom:1px solid #d8b4fe; padding:7px 16px; font-size:12px; font-weight:700; color:#6b21a8; letter-spacing:.05em; display:flex; align-items:center; gap:8px; }
+  .catering-order-badge { background:#6b21a8; color:#fff; padding:2px 8px; border-radius:10px; font-size:10px; }
+  .catering-type-badge { padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
+  .catering-type-badge.prep { background:#fef7e8; color:#e8a020; border:1px solid #fde68a; }
+  .catering-type-badge.assemble { background:#e8f5ee; color:#2e7d52; border:1px solid #a8ddc0; }
 
   /* PREP TABLE */
   .prep-table { width:100%; border-collapse:collapse; }
@@ -98,6 +104,7 @@
   input.qty-input { width:64px; padding:5px 8px; border:1px solid var(--border); border-radius:5px; font-size:13px; text-align:center; font-family:var(--font-ui); }
   input.qty-input:focus { outline:none; border-color:var(--accent); }
   input.qty-input.auto-filled { border-color:var(--blue); background:var(--blue-light); }
+  input.qty-input.catering-auto { border-color:var(--purple); background:var(--purple-light); }
 
   select.assign-select { padding:5px 8px; border:1px solid var(--border); border-radius:5px; font-size:12px; font-family:var(--font-ui); min-width:90px; background:var(--card); }
   input.initials-input { width:52px; padding:5px 6px; border:1px solid var(--border); border-radius:5px; font-size:12px; text-align:center; font-family:var(--font-ui); }
@@ -113,11 +120,6 @@
   .save-status.saving { color:var(--yellow); }
   .save-status.saved { color:var(--green); }
   .save-status.error { color:var(--accent); }
-
-  /* SCHEDULED HOURS */
-  .sched-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-  .sched-row label { font-size:12px; color:var(--text-muted); font-weight:600; }
-  .sched-row input { width:70px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius); font-size:13px; }
 
   /* ARCHIVE TAB */
   .archive-list { display:flex; flex-direction:column; gap:10px; }
@@ -168,6 +170,18 @@
   .btn-icon { background:none; border:none; cursor:pointer; font-size:16px; padding:2px 6px; border-radius:4px; }
   .btn-icon:hover { background:var(--accent-light); }
 
+  /* CATERING ITEMS TABLE in Settings */
+  .catering-items-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .catering-items-table th { padding:6px 8px; text-align:left; font-size:11px; color:var(--text-muted); text-transform:uppercase; border-bottom:1px solid var(--border); background:var(--bg); white-space:nowrap; }
+  .catering-items-table td { padding:5px 8px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .catering-items-table tr:last-child td { border-bottom:none; }
+  .catering-items-table input[type=number] { width:58px; padding:3px 5px; border:1px solid var(--border); border-radius:4px; font-size:12px; font-family:var(--font-ui); }
+  .catering-items-table input[type=number]:focus { outline:none; border-color:var(--accent); }
+  .toggle-btn { padding:3px 10px; border-radius:10px; font-size:11px; font-weight:600; cursor:pointer; border:none; }
+  .toggle-btn.yes { background:var(--yellow-light); color:var(--yellow); border:1px solid #fde68a; }
+  .toggle-btn.no { background:var(--bg); color:var(--text-muted); border:1px solid var(--border); }
+  .segment-header-row td { background:#f0ede8; font-weight:700; font-size:11px; text-transform:uppercase; color:var(--text-muted); letter-spacing:.04em; padding:5px 8px; }
+
   /* SETTINGS misc */
   .settings-field { margin-bottom:12px; }
   .settings-field label { display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:.04em; }
@@ -176,14 +190,67 @@
   .btn-outline { background:none; border:1px solid var(--accent); color:var(--accent); padding:8px 16px; border-radius:var(--radius); font-size:13px; font-weight:600; cursor:pointer; }
   .btn-outline:hover { background:var(--accent-light); }
 
+  /* CATERING ORDERS TAB */
+  .catering-page { display:flex; gap:16px; flex-wrap:wrap; }
+  .catering-order-form { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; flex:0 0 320px; }
+  .catering-order-form h3 { font-size:14px; font-weight:700; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  .form-field { margin-bottom:12px; }
+  .form-field label { display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:.03em; }
+  .form-field input, .form-field select { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:5px; font-size:13px; font-family:var(--font-ui); background:var(--card); }
+  .form-field input:focus, .form-field select:focus { outline:none; border-color:var(--purple); }
+  .order-items-section { flex:1; min-width:320px; }
+  .order-items-section h3 { font-size:14px; font-weight:700; margin-bottom:12px; }
+  .segment-group { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; }
+  .segment-group-header { background:var(--bg); padding:8px 14px; font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; cursor:pointer; display:flex; align-items:center; justify-content:space-between; }
+  .segment-group-header:hover { background:#eceae5; }
+  .segment-group-body { display:none; }
+  .segment-group-body.open { display:block; }
+  .catering-menu-row { display:flex; align-items:center; gap:8px; padding:6px 14px; border-bottom:1px solid var(--border); }
+  .catering-menu-row:last-child { border-bottom:none; }
+  .catering-menu-row .item-label { flex:1; font-size:13px; }
+  .catering-menu-row .has-prep-tag { font-size:10px; padding:2px 6px; border-radius:8px; background:var(--yellow-light); color:var(--yellow); border:1px solid #fde68a; white-space:nowrap; }
+  .catering-qty-input { width:60px; padding:4px 6px; border:1px solid var(--border); border-radius:5px; font-size:13px; text-align:center; font-family:var(--font-ui); }
+  .catering-qty-input:focus { outline:none; border-color:var(--purple); }
+
+  /* ORDERS LIST */
+  .orders-list-section { margin-top:20px; }
+  .orders-list-section h3 { font-size:14px; font-weight:700; margin-bottom:12px; font-family:var(--font); }
+  .order-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; }
+  .order-card-header { padding:12px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; }
+  .order-card-header:hover { background:var(--bg); }
+  .order-name { font-weight:700; font-family:var(--font); font-size:14px; }
+  .order-dates { font-size:12px; color:var(--text-muted); margin-top:2px; }
+  .order-detail { display:none; padding:12px 16px; border-top:1px solid var(--border); background:var(--bg); }
+  .order-detail.open { display:block; }
+  .order-item-line { display:flex; gap:8px; padding:4px 0; font-size:13px; border-bottom:1px solid var(--border); align-items:center; }
+  .order-item-line:last-child { border-bottom:none; }
+
+  /* NOTIFICATIONS TAB */
+  .notif-section { margin-bottom:24px; }
+  .notif-section h3 { font-size:15px; font-weight:700; font-family:var(--font); margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .notif-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:10px; display:flex; gap:14px; align-items:flex-start; }
+  .notif-card.order-notif { border-left:4px solid var(--accent); }
+  .notif-card.prep-notif { border-left:4px solid var(--yellow); }
+  .notif-card.assemble-notif { border-left:4px solid var(--green); }
+  .notif-icon { font-size:24px; flex-shrink:0; }
+  .notif-body { flex:1; }
+  .notif-title { font-weight:700; font-size:13px; margin-bottom:4px; }
+  .notif-subtitle { font-size:12px; color:var(--text-muted); margin-bottom:6px; }
+  .notif-items { font-size:12px; }
+  .notif-item-line { padding:3px 0; border-bottom:1px solid var(--border); display:flex; gap:8px; }
+  .notif-item-line:last-child { border-bottom:none; }
+  .notif-qty { font-weight:700; width:24px; }
+  .empty-notif { text-align:center; color:var(--text-muted); font-size:13px; padding:24px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); }
+
   /* PRINT */
   @media print {
-    header, nav, .date-row, .save-row, .summary-bar, .section-filter, .sched-row, #tab-archive, #tab-settings, .no-print { display:none !important; }
+    header, nav, .date-row, .save-row, .summary-bar, #tab-archive, #tab-settings, #tab-catering, #tab-notifications, .no-print { display:none !important; }
     body { background:#fff; font-size:12px; }
     .tab { display:block !important; padding:10px; max-width:100%; }
     .section-block { border:1px solid #ccc; margin-bottom:10px; page-break-inside:avoid; }
     .section-header { background:#333 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .frozen-day-header { background:#e0e8f5 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .catering-order-header { background:#f3e8ff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     input, select { border:none !important; background:transparent !important; }
     .print-header { display:block !important; margin-bottom:16px; }
     .prep-row-noqty { display:none !important; }
@@ -209,6 +276,9 @@
   .add-item-form input[type=number] { width:64px; }
 
   .empty-state { padding:30px; text-align:center; color:var(--text-muted); font-size:13px; }
+
+  .btn-danger { background:none; border:1px solid var(--accent); color:var(--accent); padding:5px 10px; border-radius:5px; font-size:12px; font-weight:600; cursor:pointer; }
+  .btn-danger:hover { background:var(--accent-light); }
 </style>
 </head>
 <body>
@@ -217,19 +287,10 @@
 <div id="setup-screen">
   <div class="setup-card">
     <h1>Kitchen Prep Manager</h1>
-    <p>Enter your Supabase credentials to get started. These are saved locally on this device.</p>
-    <div class="setup-field">
-      <label>Restaurant Name</label>
-      <input id="setup-rest-name" type="text" placeholder="e.g. Radish Nashville" />
-    </div>
-    <div class="setup-field">
-      <label>Supabase Project URL</label>
-      <input id="setup-url" type="text" placeholder="https://xxxx.supabase.co" />
-    </div>
-    <div class="setup-field">
-      <label>Supabase Anon Key</label>
-      <input id="setup-key" type="text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
-    </div>
+    <p>Enter your Supabase credentials to get started.</p>
+    <div class="setup-field"><label>Restaurant Name</label><input id="setup-rest-name" type="text" /></div>
+    <div class="setup-field"><label>Supabase Project URL</label><input id="setup-url" type="text" /></div>
+    <div class="setup-field"><label>Supabase Anon Key</label><input id="setup-key" type="text" /></div>
     <button class="btn-primary" onclick="saveSetup()">Save & Continue</button>
   </div>
 </div>
@@ -239,7 +300,6 @@
   <div class="spinner"></div>
   <div style="font-size:13px;color:var(--text-muted)">Loading...</div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <!-- HEADER -->
@@ -250,6 +310,8 @@
   </div>
   <nav>
     <button class="active" onclick="switchTab('prep',this)">Prep List</button>
+    <button onclick="switchTab('catering',this)">Catering</button>
+    <button onclick="switchTab('notifications',this)" id="notif-tab-btn">Notifications</button>
     <button onclick="switchTab('archive',this)">Archive</button>
     <button onclick="switchTab('settings',this)">Settings</button>
     <button onclick="window.print()" class="no-print" style="color:var(--text-muted)">🖨</button>
@@ -262,7 +324,6 @@
     <h2 id="print-rest-name"></h2>
     <p id="print-date-line"></p>
   </div>
-
   <div class="no-print">
     <div class="date-row">
       <label>Date:</label>
@@ -273,8 +334,6 @@
       <input type="number" id="fixed-boh" min="0" max="999" step="5" placeholder="min" onchange="saveFixedBoh()" />
       <div class="spacer"></div>
     </div>
-
-    <!-- SECTION FILTER DROPDOWN -->
     <div class="date-row" style="margin-bottom:10px;">
       <label>Show Section:</label>
       <select id="section-filter-select" onchange="filterSection(this.value)">
@@ -282,40 +341,77 @@
       </select>
     </div>
   </div>
-
-  <!-- Summary bar -->
   <div class="summary-bar no-print">
-    <div class="summary-item">
-      <div class="val" id="sum-items">0</div>
-      <div class="lbl">Items</div>
-    </div>
+    <div class="summary-item"><div class="val" id="sum-items">0</div><div class="lbl">Items</div></div>
     <div class="summary-divider"></div>
-    <div class="summary-item">
-      <div class="val" id="sum-assigned">0</div>
-      <div class="lbl">Assigned</div>
-    </div>
+    <div class="summary-item"><div class="val" id="sum-assigned">0</div><div class="lbl">Assigned</div></div>
     <div class="summary-divider"></div>
-    <div class="summary-item">
-      <div class="val" id="sum-hours">0</div>
-      <div class="lbl">Est. Hours</div>
-    </div>
+    <div class="summary-item"><div class="val" id="sum-hours">0</div><div class="lbl">Est. Hours</div></div>
     <div class="summary-divider"></div>
-    <div class="summary-item">
-      <div class="val" id="sum-sched">—</div>
-      <div class="lbl">Sched. Hours</div>
-    </div>
+    <div class="summary-item"><div class="val" id="sum-sched">—</div><div class="lbl">Sched. Hours</div></div>
     <div class="summary-divider"></div>
-    <div class="summary-item" id="sum-delta-wrap">
-      <div class="val" id="sum-delta">—</div>
-      <div class="lbl">Over/Under</div>
-    </div>
+    <div class="summary-item" id="sum-delta-wrap"><div class="val" id="sum-delta">—</div><div class="lbl">Over/Under</div></div>
   </div>
-
   <div id="sections-container"></div>
-
   <div class="save-row no-print">
     <button class="btn-save" id="save-btn" onclick="saveDay()">💾 Save This List</button>
     <span class="save-status" id="save-status"></span>
+  </div>
+</div>
+
+<!-- CATERING TAB -->
+<div class="tab" id="tab-catering">
+  <h2 style="font-family:var(--font);margin-bottom:16px;">Catering Orders</h2>
+  <div class="catering-page">
+    <!-- New Order Form -->
+    <div class="catering-order-form">
+      <h3>➕ New Order</h3>
+      <div class="form-field">
+        <label>Customer / Event Name</label>
+        <input type="text" id="cat-order-name" placeholder="e.g. Smith Wedding" />
+      </div>
+      <div class="form-field">
+        <label>Event Date</label>
+        <input type="date" id="cat-event-date" />
+      </div>
+      <div class="form-field">
+        <label>Catering Prep Date (CPD)</label>
+        <input type="date" id="cat-cpd" />
+        <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Assemble happens on CPD. Prep happens day before CPD.</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button class="btn-primary" style="flex:1;margin-top:0;" onclick="submitCateringOrder()">Save Order</button>
+        <button class="btn-outline" onclick="clearOrderForm()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Menu Items -->
+    <div class="order-items-section">
+      <h3>Order Items <span style="font-size:12px;font-weight:400;color:var(--text-muted)">— set qty for items to include</span></h3>
+      <div id="catering-menu-groups"></div>
+    </div>
+  </div>
+
+  <!-- Existing Orders -->
+  <div class="orders-list-section">
+    <h3>Upcoming Orders</h3>
+    <div id="orders-list"></div>
+  </div>
+</div>
+
+<!-- NOTIFICATIONS TAB -->
+<div class="tab" id="tab-notifications">
+  <h2 style="font-family:var(--font);margin-bottom:4px;">Notifications</h2>
+  <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Showing notifications active today only.</p>
+
+  <div class="notif-section">
+    <h3>📦 Order Notifications <span style="font-size:12px;font-weight:400;color:var(--text-muted);font-family:var(--font-ui)">— items to ORDER 3 days before prep</span></h3>
+    <div id="notif-order-container"></div>
+  </div>
+
+  <div class="notif-section">
+    <h3>🥘 Prep Notifications <span style="font-size:12px;font-weight:400;color:var(--text-muted);font-family:var(--font-ui)">— day before prep day</span></h3>
+    <div id="notif-prep-container"></div>
   </div>
 </div>
 
@@ -340,7 +436,7 @@
       <div class="settings-field">
         <label>Fixed BOH Time (minutes)</label>
         <input id="set-fixed-boh" type="number" min="0" step="5" onchange="saveFixedBohSettings()" />
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Added to total time (cleaning, etc.). Saved to cloud.</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Added to total time. Saved to cloud.</div>
       </div>
       <div class="settings-field" style="margin-top:12px;">
         <button class="btn-outline" onclick="reconfigure()">Re-configure Supabase</button>
@@ -357,7 +453,7 @@
       </div>
     </div>
 
-    <!-- Prep Items -->
+    <!-- Prep Items (non-catering sections) -->
     <div class="settings-card" style="grid-column:1/-1;">
       <h3>Prep Items</h3>
       <div class="section-tabs" id="settings-section-tabs"></div>
@@ -386,6 +482,26 @@
         <button class="btn-outline" onclick="toggleAddForm()">+ New Item</button>
       </div>
     </div>
+
+    <!-- Catering Items Settings -->
+    <div class="settings-card" style="grid-column:1/-1;">
+      <h3>🍽 Catering Menu Items</h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Toggle "Has Prep" to add a PREP step (day before CPD). All items always get an ASSEMBLE step on CPD. Step Qty = 1 (qty &gt; 1 adds 30% time).</p>
+      <div style="overflow-x:auto;">
+        <table class="catering-items-table" id="catering-items-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Segment</th>
+              <th>Has Prep</th>
+              <th>Prep Time (min)</th>
+              <th>Assemble Time (min)</th>
+            </tr>
+          </thead>
+          <tbody id="catering-items-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -398,8 +514,11 @@ let prepItems = [], staff = [], assignments = {}, currentDate = '', schedHours =
 let saveDebounce = null;
 let settingsSectionIdx = 0;
 let currentSectionFilter = 'all';
+let cateringItems = [];   // from DB: catering_items table
+let cateringOrders = [];  // from DB: catering_orders table
+let pendingOrderItems = {}; // itemId -> qty while building a new order
 
-// FROZEN PREP DATA — day-based schedule
+// FROZEN PREP DATA
 const FROZEN_ITEMS_BY_DAY = {
   Monday: [
     { name: 'Bolognese (Defrost Chicken Stock and Ground Beef)', mins: 5 },
@@ -445,6 +564,7 @@ const FROZEN_ITEMS_BY_DAY = {
   ],
 };
 
+// Section order — Catering is last but managed separately in settings
 const SECTION_ORDER = [
   'Breakfast prep',
   'Baked goods breakfast',
@@ -453,8 +573,9 @@ const SECTION_ORDER = [
   'Frozen prep',
   'Baked goods prep',
   'Evening prep',
-  'Catering',
 ];
+// Settings prep-items section tabs (excludes Catering — handled separately)
+const SETTINGS_SECTION_ORDER = [...SECTION_ORDER];
 
 function supa(path, opts={}) {
   return fetch(SUPA_URL + '/rest/v1/' + path, {
@@ -516,34 +637,91 @@ async function init() {
   if (!checkSetup()) return;
   showLoading(true);
   try {
-    await Promise.all([loadStaff(), loadPrepItems()]);
+    await ensureCateringTables();
+    await Promise.all([loadStaff(), loadPrepItems(), loadCateringItems(), loadCateringOrders()]);
     buildDateDropdown();
     buildSectionFilterDropdown();
     currentDate = document.getElementById('date-select').value;
     await loadDayData(currentDate);
     await loadArchive();
+    renderCateringOrderForm();
+    renderOrdersList();
+    renderNotifications();
+    updateNotifBadge();
   } catch(e) {
     console.error(e);
     showToast('Connection error — check Supabase credentials', 4000);
   }
   showLoading(false);
+
+  // Default CPD to tomorrow
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  document.getElementById('cat-cpd').value = fmtDate(tomorrow);
+  // Default event date to day after tomorrow
+  const dayAfter = new Date();
+  dayAfter.setDate(dayAfter.getDate() + 2);
+  document.getElementById('cat-event-date').value = fmtDate(dayAfter);
 }
 
 // ============================================================
-// SETTINGS — FIXED BOH (Supabase)
+// ENSURE CATERING TABLES EXIST (graceful check via GET)
+// ============================================================
+async function ensureCateringTables() {
+  // We just attempt to load — if tables don't exist, we show a setup hint
+  // Tables must be created manually in Supabase. See console for SQL.
+  const r = await supa('catering_items?limit=1');
+  if (!r.ok) {
+    console.warn('catering_items table may not exist. Run the SQL setup below in Supabase:');
+    console.warn(`
+-- Catering items master list
+CREATE TABLE catering_items (
+  id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  name text NOT NULL,
+  segment text NOT NULL,
+  has_prep boolean DEFAULT false,
+  prep_time int DEFAULT 0,
+  assemble_time int DEFAULT 5,
+  sort_order int DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE catering_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon_all" ON catering_items FOR ALL USING (true) WITH CHECK (true);
+
+-- Catering orders
+CREATE TABLE catering_orders (
+  id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  customer_name text NOT NULL,
+  event_date date NOT NULL,
+  cpd date NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE catering_orders ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon_all" ON catering_orders FOR ALL USING (true) WITH CHECK (true);
+
+-- Catering order line items
+CREATE TABLE catering_order_items (
+  id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  order_id bigint REFERENCES catering_orders(id) ON DELETE CASCADE,
+  catering_item_id bigint REFERENCES catering_items(id) ON DELETE CASCADE,
+  qty int DEFAULT 1,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE catering_order_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon_all" ON catering_order_items FOR ALL USING (true) WITH CHECK (true);
+    `);
+  }
+}
+
+// ============================================================
+// FIXED BOH
 // ============================================================
 async function loadFixedBoh() {
   try {
     const r = await supa('settings?key=eq.fixed_boh&select=value');
     const d = await r.json();
-    if (d && d.length > 0) {
-      fixedBoh = parseFloat(d[0].value) || 0;
-    } else {
-      fixedBoh = 0;
-    }
-  } catch(e) {
-    fixedBoh = 0;
-  }
+    fixedBoh = (d && d.length > 0) ? (parseFloat(d[0].value) || 0) : 0;
+  } catch(e) { fixedBoh = 0; }
   document.getElementById('fixed-boh').value = fixedBoh || '';
   document.getElementById('set-fixed-boh').value = fixedBoh || '';
 }
@@ -565,7 +743,6 @@ async function saveFixedBohSettings() {
 }
 
 async function persistFixedBoh(val) {
-  // Upsert into settings table
   try {
     await supa('settings', {
       method: 'POST',
@@ -573,7 +750,7 @@ async function persistFixedBoh(val) {
       headers: { 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify({ key: 'fixed_boh', value: String(val) })
     });
-  } catch(e) { console.error('Fixed BOH save error', e); }
+  } catch(e) {}
 }
 
 // ============================================================
@@ -586,8 +763,7 @@ async function loadStaff() {
 }
 
 function renderStaff() {
-  const list = document.getElementById('staff-list');
-  list.innerHTML = staff.map(s => `
+  document.getElementById('staff-list').innerHTML = staff.map(s => `
     <div class="staff-item">
       <span>${s.name}</span>
       <button class="btn-small danger" onclick="deleteStaff(${s.id})">Remove</button>
@@ -617,7 +793,7 @@ async function deleteStaff(id) {
 }
 
 // ============================================================
-// PREP ITEMS
+// PREP ITEMS (non-catering)
 // ============================================================
 async function loadPrepItems() {
   const r = await supa('prep_items?select=id,name,section,mins,unit_qty,sort_order&order=sort_order,id');
@@ -627,9 +803,7 @@ async function loadPrepItems() {
 }
 
 function buildSettingsSectionTabs() {
-  const container = document.getElementById('settings-section-tabs');
-  const tabs = document.getElementById('settings-section-tabs');
-  tabs.innerHTML = SECTION_ORDER.map((s,i)=>`
+  document.getElementById('settings-section-tabs').innerHTML = SETTINGS_SECTION_ORDER.map((s,i)=>`
     <button class="section-tab${i===settingsSectionIdx?' active':''}" onclick="switchSettingsSection(${i})">${s}</button>
   `).join('');
 }
@@ -641,7 +815,7 @@ function switchSettingsSection(idx) {
 }
 
 function renderSettingsItems(idx) {
-  const section = SECTION_ORDER[idx];
+  const section = SETTINGS_SECTION_ORDER[idx];
   const items = prepItems.filter(i=>i.section===section);
   const tbody = document.getElementById('items-tbody');
   tbody.innerHTML = items.map(item=>`
@@ -654,7 +828,7 @@ function renderSettingsItems(idx) {
       <td><input type="text" value="${escHtml(item.name)}" onchange="updateItem(${item.id},'name',this.value)" style="min-width:200px;" /></td>
       <td><input type="number" value="${item.mins||0}" onchange="updateItem(${item.id},'mins',this.value)" /></td>
       <td><input type="number" value="${item.unit_qty||0}" onchange="updateItem(${item.id},'unit_qty',this.value)" /></td>
-      <td><button class="btn-icon" onclick="deleteItem(${item.id})" title="Delete">🗑</button></td>
+      <td><button class="btn-icon" onclick="deleteItem(${item.id})">🗑</button></td>
     </tr>
   `).join('');
   if (items.length === 0) {
@@ -665,7 +839,7 @@ function renderSettingsItems(idx) {
 async function updateItem(id, field, val) {
   const item = prepItems.find(i=>i.id===id);
   if (!item) return;
-  item[field] = field==='mins'||field==='unit_qty' ? (parseFloat(val)||0) : val;
+  item[field] = (field==='mins'||field==='unit_qty') ? (parseFloat(val)||0) : val;
   await supa('prep_items?id=eq.'+id, { method:'PATCH', body: JSON.stringify({[field]: item[field]}) });
   renderPrepList();
 }
@@ -679,15 +853,14 @@ async function deleteItem(id) {
 }
 
 function toggleAddForm() {
-  const f = document.getElementById('add-item-form');
-  f.classList.toggle('open');
+  document.getElementById('add-item-form').classList.toggle('open');
 }
 
 async function addItem() {
   const name = document.getElementById('new-item-name').value.trim();
   const mins = parseFloat(document.getElementById('new-item-mins').value)||0;
   const unit_qty = parseFloat(document.getElementById('new-item-step').value)||0;
-  const section = SECTION_ORDER[settingsSectionIdx];
+  const section = SETTINGS_SECTION_ORDER[settingsSectionIdx];
   if (!name) return;
   const maxSort = Math.max(0, ...prepItems.map(i=>i.sort_order||0));
   const r = await supa('prep_items', {
@@ -704,6 +877,459 @@ async function addItem() {
 }
 
 // ============================================================
+// CATERING ITEMS (DB)
+// ============================================================
+async function loadCateringItems() {
+  try {
+    const r = await supa('catering_items?select=id,name,segment,has_prep,prep_time,assemble_time,sort_order&order=segment,sort_order,id');
+    const d = await r.json();
+    if (Array.isArray(d)) {
+      cateringItems = d;
+      // Seed if empty
+      if (cateringItems.length === 0) {
+        await seedCateringItems();
+      }
+    }
+  } catch(e) { console.error('loadCateringItems', e); }
+  renderCateringItemsSettings();
+}
+
+async function seedCateringItems() {
+  const seed = [
+    {name:'Iced Coffee',segment:'Beverages',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Housemade Lemonade',segment:'Beverages',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Hot Coffee',segment:'Beverages',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Boxed Full Sandwich Lunch',segment:'Boxed Lunches',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Boxed Half Sandwich Lunch',segment:'Boxed Lunches',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Chopped Salad',segment:'Boxed Lunches',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Asian Chicken Salad',segment:'Boxed Lunches',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Breakfast Sandwich Platter',segment:'Breakfast and Brunch',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Egg Bites Platter with Sausage',segment:'Breakfast and Brunch',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Vegetarian Egg Bites Platter',segment:'Breakfast and Brunch',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Muffin Platter',segment:'Breakfast and Brunch',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Banana Bread Platter',segment:'Breakfast and Brunch',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Coffee Cake Platter',segment:'Breakfast and Brunch',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Zucchini Bread Platter',segment:'Breakfast and Brunch',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Pastry Platter',segment:'Breakfast and Brunch',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Birthday Cake with Vanilla Buttercream',segment:'Celebration Cakes and Pies',has_prep:true,prep_time:60,assemble_time:5},
+    {name:'Orange Olive Oil Cake with Whipped Cream',segment:'Celebration Cakes and Pies',has_prep:true,prep_time:60,assemble_time:5},
+    {name:'Flourless Chocolate Cake',segment:'Celebration Cakes and Pies',has_prep:true,prep_time:60,assemble_time:5},
+    {name:'Cookie Cake',segment:'Celebration Cakes and Pies',has_prep:true,prep_time:60,assemble_time:5},
+    {name:'Baked Chicken Tenders with Honey Mustard',segment:'Comfort Foods',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Baked Mac n Cheese',segment:'Comfort Foods',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Cookie Platter',segment:'Cookies, Bars, and Brownies',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Two Bite Blondie Platter',segment:'Cookies, Bars, and Brownies',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Two Bite Brownie Platter',segment:'Cookies, Bars, and Brownies',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Cookie/Brownie/Blondie Platter',segment:'Cookies, Bars, and Brownies',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Hummus',segment:'Dips and Snacks',has_prep:true,prep_time:10,assemble_time:5},
+    {name:'Red Pepper & Walnut Dip',segment:'Dips and Snacks',has_prep:true,prep_time:10,assemble_time:5},
+    {name:'White Bean Puree',segment:'Dips and Snacks',has_prep:true,prep_time:10,assemble_time:5},
+    {name:'Bag of Toasted Crostini',segment:'Dips and Snacks',has_prep:true,prep_time:10,assemble_time:5},
+    {name:'Roasted Salmon with Herbs',segment:'Entree Platters',has_prep:true,prep_time:45,assemble_time:5},
+    {name:'Chicken with Arugula Pesto',segment:'Entree Platters',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Chicken Sausage and Spinach Lasagna',segment:'Entree Platters',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Chicken and Spinach Enchiladas',segment:'Entree Platters',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Chicken Pot Pie',segment:'Entree Platters',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Herby Chicken Skewers - Entree',segment:'Entree Platters',has_prep:true,prep_time:45,assemble_time:5},
+    {name:'Crudites Platter',segment:'Graze Boards',has_prep:true,prep_time:45,assemble_time:1},
+    {name:'Cheese Board',segment:'Graze Boards',has_prep:true,prep_time:45,assemble_time:1},
+    {name:'Kale Caesar Salad',segment:'Greens & Grains',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Butternut Squash and Farro Salad',segment:'Greens & Grains',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Roasted Cauliflower',segment:'Greens & Grains',has_prep:true,prep_time:45,assemble_time:5},
+    {name:'Chicken Sliders',segment:'Party Platters',has_prep:true,prep_time:45,assemble_time:5},
+    {name:'Roast Beef Sliders',segment:'Party Platters',has_prep:true,prep_time:45,assemble_time:5},
+    {name:'Turkey & Cheddar Sandwich with Dijonnaise',segment:'Sandwich Platter',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Roasted Butternut Squash & Goat Cheese Sandwich',segment:'Sandwich Platter',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Tofu Bahn Mi',segment:'Sandwich Platter',has_prep:true,prep_time:45,assemble_time:5},
+    {name:'Roasted Vegetable and Mozzarella Sandwich with Arugula Pesto',segment:'Sandwich Platter',has_prep:false,prep_time:0,assemble_time:5},
+    {name:'Pigs in a Blanket',segment:'Small Bites',has_prep:true,prep_time:45,assemble_time:5},
+    {name:'Herby Chicken Skewers',segment:'Small Bites',has_prep:true,prep_time:45,assemble_time:5},
+  ].map((item, i) => ({...item, sort_order: i+1}));
+
+  try {
+    const r = await supa('catering_items', {
+      method: 'POST',
+      prefer: 'return=representation',
+      body: JSON.stringify(seed)
+    });
+    const d = await r.json();
+    if (Array.isArray(d)) cateringItems = d;
+  } catch(e) { console.error('seed catering items', e); }
+}
+
+function renderCateringItemsSettings() {
+  const tbody = document.getElementById('catering-items-tbody');
+  if (!tbody) return;
+  const bySegment = {};
+  cateringItems.forEach(item => {
+    if (!bySegment[item.segment]) bySegment[item.segment] = [];
+    bySegment[item.segment].push(item);
+  });
+  let html = '';
+  Object.entries(bySegment).forEach(([seg, items]) => {
+    html += `<tr class="segment-header-row"><td colspan="5">${escHtml(seg)}</td></tr>`;
+    items.forEach(item => {
+      html += `<tr data-cat-id="${item.id}">
+        <td style="min-width:200px">${escHtml(item.name)}</td>
+        <td style="color:var(--text-muted);font-size:11px;">${escHtml(item.segment)}</td>
+        <td>
+          <button class="toggle-btn ${item.has_prep?'yes':'no'}" onclick="toggleCateringHasPrep(${item.id})">
+            ${item.has_prep ? 'YES' : 'NO'}
+          </button>
+        </td>
+        <td>
+          <input type="number" min="0" value="${item.has_prep ? (item.prep_time||0) : ''}"
+            placeholder="${item.has_prep ? '0' : 'N/A'}"
+            ${item.has_prep ? '' : 'disabled style="opacity:.4"'}
+            onchange="updateCateringItem(${item.id},'prep_time',this.value)" />
+        </td>
+        <td>
+          <input type="number" min="0" value="${item.assemble_time||5}"
+            onchange="updateCateringItem(${item.id},'assemble_time',this.value)" />
+        </td>
+      </tr>`;
+    });
+  });
+  tbody.innerHTML = html;
+}
+
+async function toggleCateringHasPrep(id) {
+  const item = cateringItems.find(i=>i.id===id);
+  if (!item) return;
+  item.has_prep = !item.has_prep;
+  if (!item.has_prep) item.prep_time = 0;
+  await supa('catering_items?id=eq.'+id, {
+    method:'PATCH',
+    body: JSON.stringify({ has_prep: item.has_prep, prep_time: item.prep_time })
+  });
+  renderCateringItemsSettings();
+  renderPrepList();
+}
+
+async function updateCateringItem(id, field, val) {
+  const item = cateringItems.find(i=>i.id===id);
+  if (!item) return;
+  item[field] = parseFloat(val)||0;
+  await supa('catering_items?id=eq.'+id, { method:'PATCH', body: JSON.stringify({[field]: item[field]}) });
+}
+
+// ============================================================
+// CATERING ORDERS
+// ============================================================
+async function loadCateringOrders() {
+  try {
+    const r = await supa('catering_orders?select=id,customer_name,event_date,cpd,created_at&order=cpd');
+    const orders = await r.json();
+    if (!Array.isArray(orders)) { cateringOrders = []; return; }
+    // Load line items for each order
+    const itemsR = await supa('catering_order_items?select=id,order_id,catering_item_id,qty');
+    const allItems = await itemsR.json();
+    cateringOrders = orders.map(o => ({
+      ...o,
+      items: Array.isArray(allItems) ? allItems.filter(i => i.order_id === o.id) : []
+    }));
+  } catch(e) { console.error('loadCateringOrders', e); cateringOrders = []; }
+}
+
+function renderCateringOrderForm() {
+  const container = document.getElementById('catering-menu-groups');
+  if (!container) return;
+  const bySegment = {};
+  cateringItems.forEach(item => {
+    if (!bySegment[item.segment]) bySegment[item.segment] = [];
+    bySegment[item.segment].push(item);
+  });
+  container.innerHTML = Object.entries(bySegment).map(([seg, items]) => `
+    <div class="segment-group">
+      <div class="segment-group-header" onclick="toggleSegment(this)">
+        <span>${escHtml(seg)}</span>
+        <span style="font-size:11px;color:var(--text-muted)">▼</span>
+      </div>
+      <div class="segment-group-body">
+        ${items.map(item => `
+          <div class="catering-menu-row">
+            <span class="item-label">${escHtml(item.name)}</span>
+            ${item.has_prep ? '<span class="has-prep-tag">+ Prep</span>' : ''}
+            <input class="catering-qty-input" type="number" min="0" placeholder="0"
+              data-cat-item-id="${item.id}"
+              oninput="setPendingQty(${item.id}, this.value)" />
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleSegment(headerEl) {
+  const body = headerEl.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+function setPendingQty(itemId, val) {
+  const qty = parseInt(val) || 0;
+  if (qty > 0) pendingOrderItems[itemId] = qty;
+  else delete pendingOrderItems[itemId];
+}
+
+async function submitCateringOrder() {
+  const name = document.getElementById('cat-order-name').value.trim();
+  const eventDate = document.getElementById('cat-event-date').value;
+  const cpd = document.getElementById('cat-cpd').value;
+  if (!name) { showToast('Enter a customer / event name'); return; }
+  if (!eventDate) { showToast('Enter event date'); return; }
+  if (!cpd) { showToast('Enter Catering Prep Date'); return; }
+  if (Object.keys(pendingOrderItems).length === 0) { showToast('Add at least one item'); return; }
+
+  showLoading(true);
+  try {
+    // Insert order
+    const oR = await supa('catering_orders', {
+      method:'POST', prefer:'return=representation',
+      body: JSON.stringify({ customer_name: name, event_date: eventDate, cpd })
+    });
+    const oD = await oR.json();
+    const orderId = oD[0].id;
+
+    // Insert line items
+    const lineItems = Object.entries(pendingOrderItems).map(([itemId, qty]) => ({
+      order_id: orderId, catering_item_id: parseInt(itemId), qty
+    }));
+    await supa('catering_order_items', {
+      method:'POST', prefer:'return=minimal',
+      body: JSON.stringify(lineItems)
+    });
+
+    showToast('Order saved!');
+    clearOrderForm();
+    await loadCateringOrders();
+    renderOrdersList();
+    renderPrepList();
+    renderNotifications();
+    updateNotifBadge();
+  } catch(e) {
+    console.error(e);
+    showToast('Error saving order');
+  }
+  showLoading(false);
+}
+
+function clearOrderForm() {
+  document.getElementById('cat-order-name').value = '';
+  pendingOrderItems = {};
+  document.querySelectorAll('.catering-qty-input').forEach(i => i.value = '');
+}
+
+function renderOrdersList() {
+  const container = document.getElementById('orders-list');
+  if (!container) return;
+  const today = fmtDate(new Date());
+  const upcoming = cateringOrders.filter(o => o.cpd >= today);
+  const past = cateringOrders.filter(o => o.cpd < today);
+
+  if (upcoming.length === 0 && past.length === 0) {
+    container.innerHTML = '<div class="empty-state">No catering orders yet.</div>';
+    return;
+  }
+
+  const renderOrder = (order, idx) => {
+    const lineItems = order.items || [];
+    const itemsHtml = lineItems.map(li => {
+      const catItem = cateringItems.find(ci => ci.id === li.catering_item_id);
+      return `<div class="order-item-line">
+        <span class="notif-qty">${li.qty}×</span>
+        <span style="flex:1">${escHtml(catItem ? catItem.name : 'Item #'+li.catering_item_id)}</span>
+        ${catItem && catItem.has_prep ? '<span style="font-size:10px;background:var(--yellow-light);color:var(--yellow);padding:2px 6px;border-radius:8px;border:1px solid #fde68a;">+ Prep</span>' : ''}
+      </div>`;
+    }).join('');
+
+    return `<div class="order-card">
+      <div class="order-card-header" onclick="toggleOrderDetail('od-${idx}')">
+        <div>
+          <div class="order-name">${escHtml(order.customer_name)}</div>
+          <div class="order-dates">CPD: ${fmtDateDisplay(new Date(order.cpd+'T12:00:00'))} · Event: ${fmtDateDisplay(new Date(order.event_date+'T12:00:00'))}</div>
+        </div>
+        <span style="font-size:12px;color:var(--text-muted);margin-left:auto;">${lineItems.length} item${lineItems.length!==1?'s':''}</span>
+        <button class="btn-danger" style="margin-left:8px;" onclick="event.stopPropagation();deleteCateringOrder(${order.id})">Delete</button>
+      </div>
+      <div class="order-detail" id="od-${idx}">${itemsHtml || '<div style="color:var(--text-muted);font-size:13px;">No items.</div>'}</div>
+    </div>`;
+  };
+
+  let html = '';
+  if (upcoming.length > 0) {
+    html += upcoming.map((o,i) => renderOrder(o, 'u'+i)).join('');
+  }
+  if (past.length > 0) {
+    html += `<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px;">Past Orders</div>`;
+    html += past.map((o,i) => renderOrder(o, 'p'+i)).join('');
+  }
+  container.innerHTML = html;
+}
+
+function toggleOrderDetail(id) {
+  document.getElementById(id)?.classList.toggle('open');
+}
+
+async function deleteCateringOrder(id) {
+  if (!confirm('Delete this catering order?')) return;
+  await supa('catering_orders?id=eq.'+id, { method:'DELETE' });
+  cateringOrders = cateringOrders.filter(o => o.id !== id);
+  renderOrdersList();
+  renderPrepList();
+  renderNotifications();
+  updateNotifBadge();
+}
+
+// ============================================================
+// GET CATERING ITEMS FOR A DATE
+// Returns list of {catItem, qty, type:'prep'|'assemble', orderName}
+// prep items appear on CPD - 1, assemble on CPD
+// ============================================================
+function getCateringItemsForDate(dateStr) {
+  const result = [];
+  const prevDay = getDateOffset(dateStr, +1); // if dateStr is prep day, CPD = dateStr + 1
+
+  cateringOrders.forEach(order => {
+    const cpdDate = order.cpd;
+    const prepDate = getDateOffset(cpdDate, -1); // day before CPD
+
+    order.items.forEach(li => {
+      const catItem = cateringItems.find(ci => ci.id === li.catering_item_id);
+      if (!catItem) return;
+
+      // ASSEMBLE row: appears on CPD
+      if (cpdDate === dateStr) {
+        result.push({ catItem, qty: li.qty, type: 'assemble', orderName: order.customer_name, orderId: order.id });
+      }
+
+      // PREP row: appears on CPD - 1 (only if has_prep)
+      if (catItem.has_prep && prepDate === dateStr) {
+        result.push({ catItem, qty: li.qty, type: 'prep', orderName: order.customer_name, orderId: order.id });
+      }
+    });
+  });
+
+  return result;
+}
+
+function getDateOffset(dateStr, days) {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  return fmtDate(d);
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+function renderNotifications() {
+  const today = fmtDate(new Date());
+  const orderContainer = document.getElementById('notif-order-container');
+  const prepContainer = document.getElementById('notif-prep-container');
+  if (!orderContainer || !prepContainer) return;
+
+  // ORDER notifications: today = CPD - 3, so CPD = today + 3
+  // Only for items with has_prep (special order items)
+  const orderNotifs = [];
+  const prepNotifs = [];
+
+  cateringOrders.forEach(order => {
+    const cpdDate = order.cpd;
+    const prepDate = getDateOffset(cpdDate, -1);
+    const orderNotifDate = getDateOffset(cpdDate, -3); // CPD - 3
+
+    order.items.forEach(li => {
+      const catItem = cateringItems.find(ci => ci.id === li.catering_item_id);
+      if (!catItem) return;
+
+      // ORDER notification: today === CPD - 3, item HAS prep (special order needed)
+      if (orderNotifDate === today && catItem.has_prep) {
+        orderNotifs.push({ catItem, qty: li.qty, order, cpdDate, prepDate });
+      }
+
+      // PREP notification: today === CPD - 1 (prep day is tomorrow = CPD)
+      // For items WITHOUT has_prep: reminder to make extra of regular stock
+      if (prepDate === today && !catItem.has_prep) {
+        prepNotifs.push({ catItem, qty: li.qty, order, cpdDate });
+      }
+    });
+  });
+
+  // Render ORDER notifications (grouped by order)
+  if (orderNotifs.length === 0) {
+    orderContainer.innerHTML = '<div class="empty-notif">No order notifications for today.</div>';
+  } else {
+    const byOrder = {};
+    orderNotifs.forEach(n => {
+      const key = n.order.id;
+      if (!byOrder[key]) byOrder[key] = { order: n.order, cpdDate: n.cpdDate, items: [] };
+      byOrder[key].items.push(n);
+    });
+    orderContainer.innerHTML = Object.values(byOrder).map(group => `
+      <div class="notif-card order-notif">
+        <div class="notif-icon">📦</div>
+        <div class="notif-body">
+          <div class="notif-title">${escHtml(group.order.customer_name)}</div>
+          <div class="notif-subtitle">ORDER these items NOW — Prep Day is ${fmtDateDisplay(new Date(getDateOffset(group.cpdDate,-1)+'T12:00:00'))}, CPD is ${fmtDateDisplay(new Date(group.cpdDate+'T12:00:00'))}</div>
+          <div class="notif-items">
+            ${group.items.map(n=>`<div class="notif-item-line"><span class="notif-qty">${n.qty}×</span><span>${escHtml(n.catItem.name)}</span></div>`).join('')}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Render PREP notifications (day before CPD — regular items, make extra)
+  if (prepNotifs.length === 0) {
+    prepContainer.innerHTML = '<div class="empty-notif">No prep notifications for today.</div>';
+  } else {
+    const byOrder = {};
+    prepNotifs.forEach(n => {
+      const key = n.order.id;
+      if (!byOrder[key]) byOrder[key] = { order: n.order, cpdDate: n.cpdDate, items: [] };
+      byOrder[key].items.push(n);
+    });
+    prepContainer.innerHTML = Object.values(byOrder).map(group => `
+      <div class="notif-card prep-notif">
+        <div class="notif-icon">🥘</div>
+        <div class="notif-body">
+          <div class="notif-title">${escHtml(group.order.customer_name)}</div>
+          <div class="notif-subtitle">Make EXTRA tomorrow (CPD: ${fmtDateDisplay(new Date(group.cpdDate+'T12:00:00'))}) — these are in-house items</div>
+          <div class="notif-items">
+            ${group.items.map(n=>`<div class="notif-item-line"><span class="notif-qty">${n.qty}×</span><span>${escHtml(n.catItem.name)}</span></div>`).join('')}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+function updateNotifBadge() {
+  const today = fmtDate(new Date());
+  let count = 0;
+  cateringOrders.forEach(order => {
+    const cpdDate = order.cpd;
+    const prepDate = getDateOffset(cpdDate, -1);
+    const orderNotifDate = getDateOffset(cpdDate, -3);
+    order.items.forEach(li => {
+      const catItem = cateringItems.find(ci => ci.id === li.catering_item_id);
+      if (!catItem) return;
+      if (orderNotifDate === today && catItem.has_prep) count++;
+      if (prepDate === today && !catItem.has_prep) count++;
+    });
+  });
+
+  const btn = document.getElementById('notif-tab-btn');
+  const existing = btn.querySelector('.notif-badge');
+  if (existing) existing.remove();
+  if (count > 0) {
+    const badge = document.createElement('span');
+    badge.className = 'notif-badge';
+    badge.textContent = count;
+    btn.appendChild(badge);
+  }
+}
+
+// ============================================================
 // DRAG & DROP (Settings)
 // ============================================================
 let dragId = null;
@@ -714,13 +1340,12 @@ async function dropItem(e, targetId) {
   e.preventDefault();
   e.currentTarget.classList.remove('drag-over');
   if (dragId === targetId) return;
-  const section = SECTION_ORDER[settingsSectionIdx];
+  const section = SETTINGS_SECTION_ORDER[settingsSectionIdx];
   const sectionItems = prepItems.filter(i=>i.section===section);
   const fromIdx = sectionItems.findIndex(i=>i.id===dragId);
   const toIdx = sectionItems.findIndex(i=>i.id===targetId);
   sectionItems.splice(toIdx, 0, sectionItems.splice(fromIdx, 1)[0]);
   sectionItems.forEach((item, idx) => { item.sort_order = idx + 1; });
-  // persist
   await Promise.all(sectionItems.map(item =>
     supa('prep_items?id=eq.'+item.id, { method:'PATCH', body: JSON.stringify({sort_order: item.sort_order}) })
   ));
@@ -755,17 +1380,16 @@ function fmtDateDisplay(d) {
   return d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', year:'numeric'});
 }
 function getDayName(dateStr) {
-  const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-US', {weekday:'long'});
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {weekday:'long'});
 }
 
 // ============================================================
-// SECTION FILTER DROPDOWN
+// SECTION FILTER
 // ============================================================
 function buildSectionFilterDropdown() {
   const sel = document.getElementById('section-filter-select');
   sel.innerHTML = '<option value="all">All Sections</option>';
-  SECTION_ORDER.forEach(s => {
+  [...SECTION_ORDER, 'Catering'].forEach(s => {
     const o = document.createElement('option');
     o.value = s;
     o.textContent = s;
@@ -789,7 +1413,6 @@ async function onDateChange() {
 }
 
 async function loadDayData(date) {
-  // Load scheduled hours
   const dpr = await supa('prep_days?prep_date=eq.'+date+'&select=scheduled_hours,saved_at');
   const dpd = await dpr.json();
   if (dpd && dpd.length > 0) {
@@ -806,7 +1429,6 @@ async function loadDayData(date) {
     document.getElementById('save-status').textContent = '';
   }
 
-  // Load assignments
   const ar = await supa('prep_assignments?prep_date=eq.'+date+'&select=item_id,qty,assigned_to,initials,notes');
   const ad = await ar.json();
   assignments = {};
@@ -814,10 +1436,11 @@ async function loadDayData(date) {
     assignments[a.item_id] = { qty: a.qty, assigned_to: a.assigned_to, initials: a.initials, notes: a.notes };
   });
 
-  // Load fixed boh from supabase
   await loadFixedBoh();
 
-  document.getElementById('print-date-line').textContent = 'Date: ' + fmtDateDisplay(new Date(date+'T12:00:00')) + '  |  Scheduled: ' + (schedHours||'—') + ' hrs  |  Fixed BOH: ' + fixedBoh + ' min';
+  document.getElementById('print-date-line').textContent =
+    'Date: ' + fmtDateDisplay(new Date(date+'T12:00:00')) +
+    '  |  Scheduled: ' + (schedHours||'—') + ' hrs  |  Fixed BOH: ' + fixedBoh + ' min';
 
   renderPrepList();
 }
@@ -832,13 +1455,15 @@ function renderPrepList() {
   const dayName = getDayName(currentDate);
   const frozenForToday = FROZEN_ITEMS_BY_DAY[dayName] || [];
 
-  const sections = currentSectionFilter === 'all'
-    ? SECTION_ORDER
-    : SECTION_ORDER.filter(s => s === currentSectionFilter);
+  const allSections = currentSectionFilter === 'all'
+    ? [...SECTION_ORDER, 'Catering']
+    : [currentSectionFilter];
 
-  sections.forEach(section => {
+  allSections.forEach(section => {
     if (section === 'Frozen prep') {
       renderFrozenSection(container, frozenForToday, dayName);
+    } else if (section === 'Catering') {
+      renderCateringSection(container);
     } else {
       const items = prepItems.filter(i => i.section === section);
       if (items.length === 0) return;
@@ -856,18 +1481,15 @@ function renderRegularSection(container, section, items) {
 
   const header = document.createElement('div');
   header.className = 'section-header';
-  header.innerHTML = `${section} <span class="sec-count" id="sec-count-${CSS.escape(section)}"></span>`;
+  header.innerHTML = `${escHtml(section)} <span class="sec-count" id="sec-count-${CSS.escape(section)}"></span>`;
   block.appendChild(header);
 
   const table = document.createElement('table');
   table.className = 'prep-table';
   table.innerHTML = `<thead><tr>
-    <th style="width:35%">Item</th>
-    <th style="width:60px">Qty</th>
-    <th style="width:80px">Assigned</th>
-    <th style="width:60px">Est. Min</th>
-    <th style="width:52px">Initials</th>
-    <th>Notes</th>
+    <th style="width:35%">Item</th><th style="width:60px">Qty</th>
+    <th style="width:110px">Assigned</th><th style="width:60px">Est. Min</th>
+    <th style="width:52px">Initials</th><th>Notes</th>
   </tr></thead>`;
   const tbody = document.createElement('tbody');
 
@@ -876,11 +1498,9 @@ function renderRegularSection(container, section, items) {
     const qty = asgn.qty != null ? asgn.qty : '';
     const mins = calcItemMins(item, parseFloat(qty) || 0);
     const hasQty = qty !== '' && parseFloat(qty) > 0;
-
     const tr = document.createElement('tr');
     tr.dataset.itemId = item.id;
     if (!hasQty) tr.classList.add('prep-row-noqty');
-
     tr.innerHTML = `
       <td class="item-name">${escHtml(item.name)}</td>
       <td><input class="qty-input" type="number" min="0" value="${escHtml(qty)}" data-id="${item.id}" onchange="onQtyChange(this)" oninput="onQtyChange(this)" /></td>
@@ -901,6 +1521,118 @@ function renderRegularSection(container, section, items) {
   updateSectionCount(section);
 }
 
+// ============================================================
+// CATERING SECTION on PREP LIST
+// ============================================================
+function renderCateringSection(container) {
+  const cateringForDate = getCateringItemsForDate(currentDate);
+  if (cateringForDate.length === 0) return;
+
+  const block = document.createElement('div');
+  block.className = 'section-block';
+  block.dataset.section = 'Catering';
+
+  const header = document.createElement('div');
+  header.className = 'section-header catering-hdr';
+  header.innerHTML = `🍽 Catering <span class="sec-count" id="sec-count-Catering"></span>`;
+  block.appendChild(header);
+
+  // Group by order
+  const byOrder = {};
+  cateringForDate.forEach(entry => {
+    const key = entry.orderId + '-' + entry.type;
+    if (!byOrder[key]) byOrder[key] = { orderName: entry.orderName, orderId: entry.orderId, type: entry.type, entries: [] };
+    byOrder[key].entries.push(entry);
+  });
+
+  Object.values(byOrder).forEach(group => {
+    const subHeader = document.createElement('div');
+    subHeader.className = 'catering-order-header';
+    subHeader.innerHTML = `
+      <span class="catering-order-badge">${escHtml(group.orderName)}</span>
+      <span class="catering-type-badge ${group.type}">${group.type === 'prep' ? '🔪 PREP' : '🥡 ASSEMBLE'}</span>
+    `;
+    block.appendChild(subHeader);
+
+    const table = document.createElement('table');
+    table.className = 'prep-table';
+    table.innerHTML = `<thead><tr>
+      <th style="width:35%">Item</th><th style="width:60px">Qty</th>
+      <th style="width:110px">Assigned</th><th style="width:60px">Est. Min</th>
+      <th style="width:52px">Initials</th><th>Notes</th>
+    </tr></thead>`;
+    const tbody = document.createElement('tbody');
+
+    group.entries.forEach(entry => {
+      const { catItem, qty, type } = entry;
+      const pseudoId = `cat_${entry.orderId}_${catItem.id}_${type}`;
+      const asgn = assignments[pseudoId] || {};
+      const baseMins = type === 'prep' ? (catItem.prep_time||0) : (catItem.assemble_time||5);
+      // Step function: qty > 1 → +30%
+      const estMins = qty > 1 ? Math.round(baseMins * 1.3) : baseMins;
+      const asgnQty = asgn.qty != null ? asgn.qty : qty; // default to order qty
+
+      const tr = document.createElement('tr');
+      tr.dataset.itemId = pseudoId;
+
+      tr.innerHTML = `
+        <td class="item-name">${escHtml(catItem.name)}</td>
+        <td><input class="qty-input catering-auto" type="number" min="0" value="${asgnQty}"
+          data-id="${escHtml(pseudoId)}" data-base-mins="${baseMins}"
+          onchange="onCateringQtyChange(this)" oninput="onCateringQtyChange(this)" /></td>
+        <td><select class="assign-select" data-id="${escHtml(pseudoId)}" onchange="onAssignChange(this)">
+          <option value="">—</option>
+          ${staff.map(s=>`<option value="${escHtml(s.name)}"${asgn.assigned_to===s.name?' selected':''}>${escHtml(s.name)}</option>`).join('')}
+        </select></td>
+        <td class="item-time active" id="time-${pseudoId}">${estMins > 0 ? estMins + ' min' : ''}</td>
+        <td><input class="initials-input" type="text" value="${escHtml(asgn.initials||'')}" data-id="${escHtml(pseudoId)}" onchange="onFieldChange(this,'initials')" /></td>
+        <td><input class="notes-input" type="text" value="${escHtml(asgn.notes||'')}" data-id="${escHtml(pseudoId)}" onchange="onFieldChange(this,'notes')" /></td>
+      `;
+      tbody.appendChild(tr);
+
+      // Pre-seed assignment with order qty
+      if (!assignments[pseudoId]) {
+        assignments[pseudoId] = { qty: qty, assigned_to: '', initials: '', notes: '' };
+      }
+    });
+
+    table.appendChild(tbody);
+    block.appendChild(table);
+  });
+
+  container.appendChild(block);
+  updateSectionCount('Catering');
+}
+
+function onCateringQtyChange(el) {
+  const id = el.dataset.id;
+  const qty = parseFloat(el.value) || 0;
+  const baseMins = parseFloat(el.dataset.baseMins) || 0;
+  if (!assignments[id]) assignments[id] = {};
+  assignments[id].qty = qty > 0 ? qty : null;
+  el.classList.remove('catering-auto');
+
+  const estMins = qty > 1 ? Math.round(baseMins * 1.3) : (qty === 1 ? baseMins : 0);
+  const timeEl = document.getElementById('time-' + id);
+  if (timeEl) {
+    timeEl.textContent = estMins > 0 ? estMins + ' min' : '';
+    timeEl.className = 'item-time' + (estMins > 0 ? ' active' : '');
+  }
+
+  const tr = el.closest('tr');
+  if (tr) {
+    if (qty > 0) tr.classList.remove('prep-row-noqty');
+    else tr.classList.add('prep-row-noqty');
+  }
+
+  updateSectionCount('Catering');
+  updateSummary();
+  triggerAutoSave();
+}
+
+// ============================================================
+// FROZEN SECTION
+// ============================================================
 function renderFrozenSection(container, frozenForToday, dayName) {
   const block = document.createElement('div');
   block.className = 'section-block';
@@ -911,14 +1643,9 @@ function renderFrozenSection(container, frozenForToday, dayName) {
   header.innerHTML = `❄️ Frozen Prep <span class="sec-count" id="sec-count-Frozen prep"></span>`;
   block.appendChild(header);
 
-  // DB-based frozen items (from prep_items where section='Frozen prep')
   const dbFrozenItems = prepItems.filter(i => i.section === 'Frozen prep');
-
-  // Build by-day groups for ALL days (for db items organized with day in name, or just render them)
-  // We render: first show today's auto-filled items, then db items not in today's list
   const allDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
-  // Show today's scheduled items with auto-fill
   if (frozenForToday.length > 0) {
     const dayBanner = document.createElement('div');
     dayBanner.className = 'frozen-day-header';
@@ -928,30 +1655,24 @@ function renderFrozenSection(container, frozenForToday, dayName) {
     const table = document.createElement('table');
     table.className = 'prep-table';
     table.innerHTML = `<thead><tr>
-      <th style="width:35%">Item</th>
-      <th style="width:60px">Qty</th>
-      <th style="width:80px">Assigned</th>
-      <th style="width:60px">Est. Min</th>
-      <th style="width:52px">Initials</th>
-      <th>Notes</th>
+      <th style="width:35%">Item</th><th style="width:60px">Qty</th>
+      <th style="width:110px">Assigned</th><th style="width:60px">Est. Min</th>
+      <th style="width:52px">Initials</th><th>Notes</th>
     </tr></thead>`;
     const tbody = document.createElement('tbody');
 
     frozenForToday.forEach(frozenItem => {
-      // Find matching db item
       const dbItem = dbFrozenItems.find(i => i.name.toLowerCase().trim() === frozenItem.name.toLowerCase().trim());
       const itemId = dbItem ? dbItem.id : ('frozen_' + frozenItem.name.replace(/\s+/g,'_'));
       const asgn = assignments[itemId] || {};
-      // Auto-fill qty=1 if not already set
       const qty = asgn.qty != null ? asgn.qty : 1;
       const mins = dbItem ? calcItemMins(dbItem, parseFloat(qty)||0) : frozenItem.mins;
-      const isAutoFilled = asgn.qty == null; // not yet overridden
+      const isAutoFilled = asgn.qty == null;
       const hasQty = parseFloat(qty) > 0;
 
       const tr = document.createElement('tr');
       tr.dataset.itemId = itemId;
       if (!hasQty) tr.classList.add('prep-row-noqty');
-
       tr.innerHTML = `
         <td class="item-name">${escHtml(frozenItem.name)}</td>
         <td><input class="qty-input${isAutoFilled?' auto-filled':''}" type="number" min="0" value="${qty}" data-id="${escHtml(itemId)}" onchange="onQtyChange(this)" oninput="onQtyChange(this)" /></td>
@@ -964,8 +1685,6 @@ function renderFrozenSection(container, frozenForToday, dayName) {
         <td><input class="notes-input" type="text" value="${escHtml(asgn.notes||'')}" data-id="${escHtml(itemId)}" onchange="onFieldChange(this,'notes')" /></td>
       `;
       tbody.appendChild(tr);
-
-      // Pre-seed assignment so it saves properly
       if (asgn.qty == null && !assignments[itemId]) {
         assignments[itemId] = { qty: 1, assigned_to: '', initials: '', notes: '' };
       }
@@ -975,17 +1694,14 @@ function renderFrozenSection(container, frozenForToday, dayName) {
     block.appendChild(table);
   }
 
-  // Show remaining DB frozen items not in today's auto-list, grouped by day
   const todayNames = frozenForToday.map(f => f.name.toLowerCase().trim());
   const otherDbItems = dbFrozenItems.filter(i => !todayNames.includes(i.name.toLowerCase().trim()));
 
   if (otherDbItems.length > 0) {
-    // Group by day using FROZEN_ITEMS_BY_DAY lookup
     const itemDayMap = {};
     Object.entries(FROZEN_ITEMS_BY_DAY).forEach(([day, items]) => {
       items.forEach(fi => { itemDayMap[fi.name.toLowerCase().trim()] = day; });
     });
-
     const byDay = {};
     otherDbItems.forEach(item => {
       const day = itemDayMap[item.name.toLowerCase().trim()] || 'Other';
@@ -1005,12 +1721,9 @@ function renderFrozenSection(container, frozenForToday, dayName) {
       const table = document.createElement('table');
       table.className = 'prep-table';
       table.innerHTML = `<thead><tr>
-        <th style="width:35%">Item</th>
-        <th style="width:60px">Qty</th>
-        <th style="width:80px">Assigned</th>
-        <th style="width:60px">Est. Min</th>
-        <th style="width:52px">Initials</th>
-        <th>Notes</th>
+        <th style="width:35%">Item</th><th style="width:60px">Qty</th>
+        <th style="width:110px">Assigned</th><th style="width:60px">Est. Min</th>
+        <th style="width:52px">Initials</th><th>Notes</th>
       </tr></thead>`;
       const tbody = document.createElement('tbody');
 
@@ -1019,11 +1732,9 @@ function renderFrozenSection(container, frozenForToday, dayName) {
         const qty = asgn.qty != null ? asgn.qty : '';
         const mins = calcItemMins(item, parseFloat(qty)||0);
         const hasQty = qty !== '' && parseFloat(qty) > 0;
-
         const tr = document.createElement('tr');
         tr.dataset.itemId = item.id;
         if (!hasQty) tr.classList.add('prep-row-noqty');
-
         tr.innerHTML = `
           <td class="item-name">${escHtml(item.name)}</td>
           <td><input class="qty-input" type="number" min="0" value="${escHtml(qty)}" data-id="${item.id}" onchange="onQtyChange(this)" oninput="onQtyChange(this)" /></td>
@@ -1063,15 +1774,12 @@ function calcItemMins(item, qty) {
 }
 
 function updateSectionCount(section) {
-  const id = 'sec-count-' + section;
-  const el = document.getElementById(id);
+  const el = document.getElementById('sec-count-' + section);
   if (!el) return;
-  // Count rows with qty > 0 in this section
   const block = el.closest('.section-block');
   if (!block) return;
-  const rows = block.querySelectorAll('tr[data-item-id]');
   let count = 0;
-  rows.forEach(r => {
+  block.querySelectorAll('tr[data-item-id]').forEach(r => {
     const inp = r.querySelector('.qty-input');
     if (inp && parseFloat(inp.value) > 0) count++;
   });
@@ -1081,7 +1789,6 @@ function updateSectionCount(section) {
 function updateSummary() {
   let totalItems = 0, totalAssigned = 0, totalMins = fixedBoh || 0;
 
-  // Regular sections
   prepItems.forEach(item => {
     const asgn = assignments[item.id];
     if (!asgn) return;
@@ -1093,19 +1800,32 @@ function updateSummary() {
     }
   });
 
-  // Frozen items (today's auto-fill + any manually entered)
   const dayName = getDayName(currentDate);
   const frozenForToday = FROZEN_ITEMS_BY_DAY[dayName] || [];
   frozenForToday.forEach(fi => {
-    const itemId = 'frozen_' + fi.name.replace(/\s+/g,'_');
     const dbItem = prepItems.find(i => i.section==='Frozen prep' && i.name.toLowerCase().trim()===fi.name.toLowerCase().trim());
-    const realId = dbItem ? dbItem.id : itemId;
+    const realId = dbItem ? dbItem.id : ('frozen_' + fi.name.replace(/\s+/g,'_'));
     const asgn = assignments[realId];
     const qty = asgn ? (parseFloat(asgn.qty)||0) : 1;
     if (qty > 0) {
       totalItems++;
       if (asgn && asgn.assigned_to) totalAssigned++;
       totalMins += dbItem ? calcItemMins(dbItem, qty) : fi.mins;
+    }
+  });
+
+  // Catering items for today
+  const cateringForDate = getCateringItemsForDate(currentDate);
+  cateringForDate.forEach(entry => {
+    const { catItem, qty: orderQty, type, orderId } = entry;
+    const pseudoId = `cat_${orderId}_${catItem.id}_${type}`;
+    const asgn = assignments[pseudoId];
+    const qty = asgn ? (parseFloat(asgn.qty)||0) : orderQty;
+    if (qty > 0) {
+      totalItems++;
+      if (asgn && asgn.assigned_to) totalAssigned++;
+      const baseMins = type === 'prep' ? (catItem.prep_time||0) : (catItem.assemble_time||5);
+      totalMins += qty > 1 ? Math.round(baseMins * 1.3) : baseMins;
     }
   });
 
@@ -1116,7 +1836,6 @@ function updateSummary() {
 
   const sched = schedHours != null ? parseFloat(schedHours) : null;
   document.getElementById('sum-sched').textContent = sched != null ? sched : '—';
-
   const deltaWrap = document.getElementById('sum-delta-wrap');
   const deltaEl = document.getElementById('sum-delta');
   if (sched != null) {
@@ -1137,11 +1856,8 @@ function onQtyChange(el) {
   const qty = parseFloat(el.value) || 0;
   if (!assignments[id]) assignments[id] = {};
   assignments[id].qty = qty > 0 ? qty : null;
-
-  // Remove auto-filled styling once manually changed
   el.classList.remove('auto-filled');
 
-  // Update time display
   const dbItem = prepItems.find(i => i.id == id);
   const timeEl = document.getElementById('time-' + id);
   if (timeEl) {
@@ -1150,7 +1866,6 @@ function onQtyChange(el) {
     timeEl.className = 'item-time' + (mins > 0 ? ' active' : '');
   }
 
-  // Toggle no-qty class for print
   const tr = el.closest('tr');
   if (tr) {
     if (qty > 0) tr.classList.remove('prep-row-noqty');
@@ -1216,11 +1931,9 @@ async function saveDay() {
 async function upsertAssignments() {
   const records = [];
   Object.entries(assignments).forEach(([itemId, asgn]) => {
-    // Skip items with no useful data
     if (!asgn.qty && !asgn.assigned_to && !asgn.initials && !asgn.notes) return;
     const parsedId = parseInt(itemId);
-    // Skip frozen items that don't have a real integer DB id
-    if (isNaN(parsedId)) return;
+    if (isNaN(parsedId)) return; // skip string pseudo-ids (catering, frozen)
     records.push({
       prep_date: currentDate,
       item_id: parsedId,
@@ -1231,17 +1944,12 @@ async function upsertAssignments() {
     });
   });
 
-  // Always delete first, then re-insert if there are records
   const delResp = await supa('prep_assignments?prep_date=eq.'+currentDate, { method:'DELETE' });
-  if (!delResp.ok && delResp.status !== 404) {
-    throw new Error('Delete failed: ' + delResp.status);
-  }
-
+  if (!delResp.ok && delResp.status !== 404) throw new Error('Delete failed: ' + delResp.status);
   if (records.length === 0) return;
 
   const insResp = await supa('prep_assignments', {
-    method: 'POST',
-    prefer: 'return=minimal',
+    method: 'POST', prefer: 'return=minimal',
     body: JSON.stringify(records)
   });
   if (!insResp.ok) {
@@ -1257,8 +1965,7 @@ async function upsertPrepDay(lock) {
     ...(lock ? { saved_at: new Date().toISOString() } : {}),
   };
   await supa('prep_days', {
-    method: 'POST',
-    prefer: 'resolution=merge-duplicates',
+    method: 'POST', prefer: 'resolution=merge-duplicates',
     body: JSON.stringify(body)
   });
 }
@@ -1296,10 +2003,7 @@ async function loadArchive() {
 
 async function toggleArchive(i) {
   const detail = document.getElementById('archive-detail-' + i);
-  if (detail.classList.contains('open')) {
-    detail.classList.remove('open');
-    return;
-  }
+  if (detail.classList.contains('open')) { detail.classList.remove('open'); return; }
   if (!detail.dataset.loaded) {
     const date = detail.dataset.date;
     const r = await supa('prep_assignments?prep_date=eq.'+date+'&select=item_id,qty,assigned_to,initials,notes');
@@ -1341,6 +2045,7 @@ function switchTab(name, btn) {
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
+  if (name === 'notifications') renderNotifications();
 }
 
 function showLoading(show) {
