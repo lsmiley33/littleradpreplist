@@ -2155,93 +2155,103 @@ function escHtml(str) {
 let laborData = []; // [{date, est_hours, sched_hours, utilization, delta}]
 
 async function loadLaborData() {
-  // Fetch last 30 days of prep_days that have scheduled_hours set
-  const r = await supa('prep_days?select=prep_date,scheduled_hours,saved_at&order=prep_date.desc&limit=60');
-  const days = await r.json();
-  if (!Array.isArray(days) || days.length === 0) { laborData = []; return; }
+  laborData = [];
+  try {
+    // Fetch last 60 prep_days entries, filter to those with scheduled hours
+    const r = await supa('prep_days?select=prep_date,scheduled_hours,saved_at&order=prep_date.desc&limit=60');
+    if (!r.ok) { console.error('loadLaborData: prep_days fetch failed', r.status); return; }
+    const days = await r.json();
+    console.log('[LABOR] prep_days rows:', days);
 
-  // For each day, compute est_hours from prep_assignments + string blob
-  const rows = days.filter(d => d.scheduled_hours != null && parseFloat(d.scheduled_hours) > 0);
-  const recent = rows.slice(0, 30);
+    if (!Array.isArray(days) || days.length === 0) return;
 
-  // Load all assignments for these dates in parallel
-  const dates = recent.map(d => d.prep_date);
+    const rows = days.filter(d => d.scheduled_hours != null && parseFloat(d.scheduled_hours) > 0);
+    console.log('[LABOR] rows with scheduled_hours:', rows);
+    const recent = rows.slice(0, 30);
+    if (recent.length === 0) return;
 
-  // Fetch all prep_assignment rows for these dates in one query
-  const dateList = dates.map(d => `"${d}"`).join(',');
-  const ar = await supa(`prep_assignments?prep_date=in.(${dates.join(',')})&select=prep_date,item_id,qty`);
-  const allAsgn = await ar.json();
+    const dates = recent.map(d => d.prep_date);
 
-  // Fetch string assignments (frozen/catering) for each date
-  const strKeys = dates.map(d => `"string_asgn_${d}"`).join(',');
-  const sr = await supa(`settings?key=in.(${dates.map(d=>'string_asgn_'+d).join(',')})&select=key,value`);
-  const strRows = await sr.json();
-  const strByDate = {};
-  (Array.isArray(strRows) ? strRows : []).forEach(row => {
-    const date = row.key.replace('string_asgn_', '');
-    try { strByDate[date] = JSON.parse(row.value) || {}; } catch(e) { strByDate[date] = {}; }
-  });
+    // Fetch all prep_assignments for these dates
+    const ar = await supa('prep_assignments?prep_date=in.(' + dates.join(',') + ')&select=prep_date,item_id,qty');
+    const allAsgn = ar.ok ? await ar.json() : [];
+    console.log('[LABOR] allAsgn count:', Array.isArray(allAsgn) ? allAsgn.length : allAsgn);
 
-  laborData = recent.map(day => {
-    const date = day.prep_date;
-    const schedHrs = parseFloat(day.scheduled_hours);
+    // Fetch string assignments for these dates from settings
+    const strKeyList = dates.map(d => 'string_asgn_' + d).join(',');
+    const sr = await supa('settings?key=in.(' + strKeyList + ')&select=key,value');
+    const strRows = sr.ok ? await sr.json() : [];
+    console.log('[LABOR] strRows count:', Array.isArray(strRows) ? strRows.length : strRows);
 
-    // Build assignment map for this date
-    const asgnMap = {};
-    (allAsgn || []).filter(a => a.prep_date === date).forEach(a => {
-      asgnMap[String(a.item_id)] = a.qty;
-    });
-    // Merge string assignments
-    const strAsgn = strByDate[date] || {};
-    Object.entries(strAsgn).forEach(([k, v]) => {
-      if (v && v.qty != null) asgnMap[k] = v.qty;
+    const strByDate = {};
+    (Array.isArray(strRows) ? strRows : []).forEach(row => {
+      const date = row.key.replace('string_asgn_', '');
+      try { strByDate[date] = JSON.parse(row.value) || {}; } catch(e) { strByDate[date] = {}; }
     });
 
-    // Calculate total minutes
-    let totalMins = fixedBoh || 0;
+    laborData = recent.map(day => {
+      const date = day.prep_date;
+      const schedHrs = parseFloat(day.scheduled_hours);
 
-    // Regular prep items
-    prepItems.forEach(item => {
-      const qty = parseFloat(asgnMap[String(item.id)]) || 0;
-      if (qty > 0) totalMins += calcItemMins(item, qty);
+      // Build assignment map for this date
+      const asgnMap = {};
+      (Array.isArray(allAsgn) ? allAsgn : []).filter(a => a.prep_date === date).forEach(a => {
+        asgnMap[String(a.item_id)] = a.qty;
+      });
+      // Merge string assignments
+      const strAsgn = strByDate[date] || {};
+      Object.entries(strAsgn).forEach(([k, v]) => {
+        if (v && v.qty != null) asgnMap[k] = v.qty;
+      });
+
+      // Calculate total minutes
+      let totalMins = fixedBoh || 0;
+
+      // Regular prep items
+      prepItems.forEach(item => {
+        const qty = parseFloat(asgnMap[String(item.id)]) || 0;
+        if (qty > 0) totalMins += calcItemMins(item, qty);
+      });
+
+      // Frozen items for that day-of-week
+      const dayName = getDayName(date);
+      const frozenForDay = FROZEN_ITEMS_BY_DAY[dayName] || [];
+      frozenForDay.forEach(fi => {
+        const dbItem = prepItems.find(i => i.section === 'Frozen prep' && i.name.toLowerCase().trim() === fi.name.toLowerCase().trim());
+        const itemId = dbItem ? String(dbItem.id) : ('frozen_' + fi.name.replace(/\s+/g,'_'));
+        const rawQty = asgnMap[itemId];
+        const qty = rawQty != null ? parseFloat(rawQty) : 1; // default 1 if not overridden
+        if (qty > 0) totalMins += dbItem ? calcItemMins(dbItem, qty) : fi.mins;
+      });
+
+      // Catering items for that date
+      const cateringForDate = getCateringItemsForDate(date);
+      cateringForDate.forEach(entry => {
+        const { catItem, qty: orderQty, type, orderId } = entry;
+        const pseudoId = `cat_${orderId}_${catItem.id}_${type}`;
+        const saved = asgnMap[pseudoId];
+        const qty = saved != null ? parseFloat(saved) : orderQty;
+        if (qty > 0) {
+          const baseMins = type === 'prep' ? (catItem.prep_time||0) : (catItem.assemble_time||5);
+          totalMins += qty > 1 ? Math.round(baseMins * 1.3) : baseMins;
+        }
+      });
+
+      const estHours = parseFloat((totalMins / 60).toFixed(2));
+      const utilization = schedHrs > 0 ? Math.round((estHours / schedHrs) * 100) : null;
+      const delta = parseFloat((estHours - schedHrs).toFixed(2));
+
+      console.log('[LABOR] date:', date, 'totalMins:', totalMins, 'estHours:', estHours, 'schedHrs:', schedHrs);
+      return { date, est_hours: estHours, sched_hours: schedHrs, utilization, delta };
     });
 
-    // Frozen items for that day-of-week
-    const dayName = getDayName(date);
-    const frozenForDay = FROZEN_ITEMS_BY_DAY[dayName] || [];
-    frozenForDay.forEach(fi => {
-      const dbItem = prepItems.find(i => i.section === 'Frozen prep' && i.name.toLowerCase().trim() === fi.name.toLowerCase().trim());
-      const itemId = dbItem ? String(dbItem.id) : ('frozen_' + fi.name.replace(/\s+/g,'_'));
-      const qty = parseFloat(asgnMap[itemId]);
-      // If explicitly saved, use it; if not in map at all, default to 1
-      const effectiveQty = !isNaN(qty) ? qty : 1;
-      if (effectiveQty > 0) {
-        totalMins += dbItem ? calcItemMins(dbItem, effectiveQty) : fi.mins;
-      }
-    });
+    // Sort ascending for chart
+    laborData.sort((a, b) => a.date.localeCompare(b.date));
+    console.log('[LABOR] final laborData:', laborData);
 
-    // Catering items for that date
-    const cateringForDate = getCateringItemsForDate(date);
-    cateringForDate.forEach(entry => {
-      const { catItem, qty: orderQty, type, orderId } = entry;
-      const pseudoId = `cat_${orderId}_${catItem.id}_${type}`;
-      const saved = asgnMap[pseudoId];
-      const qty = saved != null ? parseFloat(saved) : orderQty;
-      if (qty > 0) {
-        const baseMins = type === 'prep' ? (catItem.prep_time||0) : (catItem.assemble_time||5);
-        totalMins += qty > 1 ? Math.round(baseMins * 1.3) : baseMins;
-      }
-    });
-
-    const estHours = parseFloat((totalMins / 60).toFixed(2));
-    const utilization = schedHrs > 0 ? Math.round((estHours / schedHrs) * 100) : null;
-    const delta = parseFloat((estHours - schedHrs).toFixed(2));
-
-    return { date, est_hours: estHours, sched_hours: schedHrs, utilization, delta };
-  });
-
-  // Sort ascending for chart display
-  laborData.sort((a, b) => a.date.localeCompare(b.date));
+  } catch(e) {
+    console.error('[LABOR] loadLaborData error:', e);
+  }
 }
 
 function renderLaborTab() {
