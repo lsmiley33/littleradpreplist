@@ -279,6 +279,19 @@
 
   .btn-danger { background:none; border:1px solid var(--accent); color:var(--accent); padding:5px 10px; border-radius:5px; font-size:12px; font-weight:600; cursor:pointer; }
   .btn-danger:hover { background:var(--accent-light); }
+
+  /* LABOR DATA TAB */
+  .labor-table { width:100%; border-collapse:collapse; font-size:13px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+  .labor-table th { padding:9px 14px; text-align:left; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; border-bottom:2px solid var(--border); background:var(--bg); font-weight:700; }
+  .labor-table td { padding:8px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .labor-table tr:last-child td { border-bottom:none; }
+  .labor-table tr:hover td { background:#faf9f7; }
+  .labor-table td.over { color:var(--accent); font-weight:700; }
+  .labor-table td.under { color:var(--green); font-weight:700; }
+  .labor-table td.utilization { font-weight:700; }
+  .labor-summary-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 18px; text-align:center; min-width:110px; }
+  .labor-summary-card .val { font-size:22px; font-weight:700; font-family:var(--font); color:var(--text); line-height:1; }
+  .labor-summary-card .lbl { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-top:3px; }
 </style>
 </head>
 <body>
@@ -312,6 +325,7 @@
     <button class="active" onclick="switchTab('prep',this)">Prep List</button>
     <button onclick="switchTab('catering',this)">Catering</button>
     <button onclick="switchTab('notifications',this)" id="notif-tab-btn">Notifications</button>
+    <button onclick="switchTab('labor',this)">Labor Data</button>
     <button onclick="switchTab('archive',this)">Archive</button>
     <button onclick="switchTab('settings',this)">Settings</button>
     <button onclick="window.print()" class="no-print" style="color:var(--text-muted)">🖨</button>
@@ -405,6 +419,33 @@
   <div class="notif-section">
     <h3>🥘 Prep Notifications <span style="font-size:12px;font-weight:400;color:var(--text-muted);font-family:var(--font-ui)">— day before prep day</span></h3>
     <div id="notif-prep-container"></div>
+  </div>
+</div>
+
+<!-- LABOR DATA TAB -->
+<div class="tab" id="tab-labor">
+  <h2 style="font-family:var(--font);margin-bottom:4px;">Labor Data</h2>
+  <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Past 30 days — days with scheduled hours entered by manager.</p>
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+    <div id="labor-summary-cards" style="display:flex;gap:12px;flex-wrap:wrap;flex:1;"></div>
+    <button class="btn-outline" onclick="downloadLaborCSV()" style="white-space:nowrap;">⬇ Download CSV</button>
+  </div>
+  <div class="section-block" style="padding:20px;">
+    <canvas id="labor-chart" height="120"></canvas>
+  </div>
+  <div style="margin-top:20px;">
+    <table class="labor-table" id="labor-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Est. Hours</th>
+          <th>Sched. Hours</th>
+          <th>% Utilized</th>
+          <th>Over/Under</th>
+        </tr>
+      </thead>
+      <tbody id="labor-tbody"></tbody>
+    </table>
   </div>
 </div>
 
@@ -2081,6 +2122,7 @@ function switchTab(name, btn) {
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
   if (name === 'notifications') renderNotifications();
+  if (name === 'labor') { showLoading(true); loadLaborData().then(() => { renderLaborTab(); showLoading(false); }); }
 }
 
 function showLoading(show) {
@@ -2105,6 +2147,297 @@ function showToast(msg, dur=2500) {
 function escHtml(str) {
   if (str == null) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============================================================
+// LABOR DATA
+// ============================================================
+let laborData = []; // [{date, est_hours, sched_hours, utilization, delta}]
+
+async function loadLaborData() {
+  // Fetch last 30 days of prep_days that have scheduled_hours set
+  const r = await supa('prep_days?select=prep_date,scheduled_hours,saved_at&order=prep_date.desc&limit=60');
+  const days = await r.json();
+  if (!Array.isArray(days) || days.length === 0) { laborData = []; return; }
+
+  // For each day, compute est_hours from prep_assignments + string blob
+  const rows = days.filter(d => d.scheduled_hours != null && parseFloat(d.scheduled_hours) > 0);
+  const recent = rows.slice(0, 30);
+
+  // Load all assignments for these dates in parallel
+  const dates = recent.map(d => d.prep_date);
+
+  // Fetch all prep_assignment rows for these dates in one query
+  const dateList = dates.map(d => `"${d}"`).join(',');
+  const ar = await supa(`prep_assignments?prep_date=in.(${dates.join(',')})&select=prep_date,item_id,qty`);
+  const allAsgn = await ar.json();
+
+  // Fetch string assignments (frozen/catering) for each date
+  const strKeys = dates.map(d => `"string_asgn_${d}"`).join(',');
+  const sr = await supa(`settings?key=in.(${dates.map(d=>'string_asgn_'+d).join(',')})&select=key,value`);
+  const strRows = await sr.json();
+  const strByDate = {};
+  (Array.isArray(strRows) ? strRows : []).forEach(row => {
+    const date = row.key.replace('string_asgn_', '');
+    try { strByDate[date] = JSON.parse(row.value) || {}; } catch(e) { strByDate[date] = {}; }
+  });
+
+  laborData = recent.map(day => {
+    const date = day.prep_date;
+    const schedHrs = parseFloat(day.scheduled_hours);
+
+    // Build assignment map for this date
+    const asgnMap = {};
+    (allAsgn || []).filter(a => a.prep_date === date).forEach(a => {
+      asgnMap[String(a.item_id)] = a.qty;
+    });
+    // Merge string assignments
+    const strAsgn = strByDate[date] || {};
+    Object.entries(strAsgn).forEach(([k, v]) => {
+      if (v && v.qty != null) asgnMap[k] = v.qty;
+    });
+
+    // Calculate total minutes
+    let totalMins = fixedBoh || 0;
+
+    // Regular prep items
+    prepItems.forEach(item => {
+      const qty = parseFloat(asgnMap[String(item.id)]) || 0;
+      if (qty > 0) totalMins += calcItemMins(item, qty);
+    });
+
+    // Frozen items for that day-of-week
+    const dayName = getDayName(date);
+    const frozenForDay = FROZEN_ITEMS_BY_DAY[dayName] || [];
+    frozenForDay.forEach(fi => {
+      const dbItem = prepItems.find(i => i.section === 'Frozen prep' && i.name.toLowerCase().trim() === fi.name.toLowerCase().trim());
+      const itemId = dbItem ? String(dbItem.id) : ('frozen_' + fi.name.replace(/\s+/g,'_'));
+      const qty = parseFloat(asgnMap[itemId]);
+      // If explicitly saved, use it; if not in map at all, default to 1
+      const effectiveQty = !isNaN(qty) ? qty : 1;
+      if (effectiveQty > 0) {
+        totalMins += dbItem ? calcItemMins(dbItem, effectiveQty) : fi.mins;
+      }
+    });
+
+    // Catering items for that date
+    const cateringForDate = getCateringItemsForDate(date);
+    cateringForDate.forEach(entry => {
+      const { catItem, qty: orderQty, type, orderId } = entry;
+      const pseudoId = `cat_${orderId}_${catItem.id}_${type}`;
+      const saved = asgnMap[pseudoId];
+      const qty = saved != null ? parseFloat(saved) : orderQty;
+      if (qty > 0) {
+        const baseMins = type === 'prep' ? (catItem.prep_time||0) : (catItem.assemble_time||5);
+        totalMins += qty > 1 ? Math.round(baseMins * 1.3) : baseMins;
+      }
+    });
+
+    const estHours = parseFloat((totalMins / 60).toFixed(2));
+    const utilization = schedHrs > 0 ? Math.round((estHours / schedHrs) * 100) : null;
+    const delta = parseFloat((estHours - schedHrs).toFixed(2));
+
+    return { date, est_hours: estHours, sched_hours: schedHrs, utilization, delta };
+  });
+
+  // Sort ascending for chart display
+  laborData.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function renderLaborTab() {
+  if (laborData.length === 0) {
+    document.getElementById('labor-tbody').innerHTML =
+      '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)">No data yet — add scheduled hours on the Prep List tab.</td></tr>';
+    document.getElementById('labor-summary-cards').innerHTML = '';
+    drawLaborChart([]);
+    return;
+  }
+
+  // Summary cards — averages
+  const withUtil = laborData.filter(d => d.utilization != null);
+  const avgUtil = withUtil.length ? Math.round(withUtil.reduce((s,d) => s + d.utilization, 0) / withUtil.length) : null;
+  const avgEst = parseFloat((laborData.reduce((s,d) => s + d.est_hours, 0) / laborData.length).toFixed(1));
+  const avgSched = parseFloat((laborData.reduce((s,d) => s + d.sched_hours, 0) / laborData.length).toFixed(1));
+  const totalOver = laborData.filter(d => d.delta > 0).length;
+
+  document.getElementById('labor-summary-cards').innerHTML = `
+    <div class="labor-summary-card">
+      <div class="val">${avgUtil != null ? avgUtil + '%' : '—'}</div>
+      <div class="lbl">Avg Utilized</div>
+    </div>
+    <div class="labor-summary-card">
+      <div class="val">${avgEst}</div>
+      <div class="lbl">Avg Est. Hrs</div>
+    </div>
+    <div class="labor-summary-card">
+      <div class="val">${avgSched}</div>
+      <div class="lbl">Avg Sched. Hrs</div>
+    </div>
+    <div class="labor-summary-card">
+      <div class="val" style="color:${totalOver > 0 ? 'var(--accent)' : 'var(--green)'}">${totalOver}</div>
+      <div class="lbl">Days Over</div>
+    </div>
+  `;
+
+  // Table (descending for reading)
+  const sorted = [...laborData].reverse();
+  document.getElementById('labor-tbody').innerHTML = sorted.map(d => {
+    const utilStr = d.utilization != null ? d.utilization + '%' : '—';
+    const utilClass = d.utilization == null ? '' : d.utilization > 100 ? 'over' : 'under';
+    const deltaStr = (d.delta > 0 ? '+' : '') + d.delta.toFixed(1) + ' hrs';
+    const deltaClass = d.delta > 0 ? 'over' : 'under';
+    return `<tr>
+      <td>${fmtDateDisplay(new Date(d.date + 'T12:00:00'))}</td>
+      <td>${d.est_hours.toFixed(1)}</td>
+      <td>${d.sched_hours.toFixed(1)}</td>
+      <td class="utilization ${utilClass}">${utilStr}</td>
+      <td class="${deltaClass}">${deltaStr}</td>
+    </tr>`;
+  }).join('');
+
+  drawLaborChart(laborData);
+}
+
+function drawLaborChart(data) {
+  const canvas = document.getElementById('labor-chart');
+  const ctx = canvas.getContext('2d');
+
+  // Size canvas to its CSS width
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const W = rect.width - 40; // padding
+  const H = 200;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (data.length === 0) {
+    ctx.fillStyle = '#aaa';
+    ctx.font = '13px Trebuchet MS';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data to display', W / 2, H / 2);
+    return;
+  }
+
+  const PAD = { top: 16, right: 16, bottom: 40, left: 44 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  // Y axis range
+  const allVals = data.flatMap(d => [d.est_hours, d.sched_hours]);
+  const maxVal = Math.ceil(Math.max(...allVals) * 1.15) || 10;
+  const minVal = 0;
+
+  const xScale = i => PAD.left + (i / (data.length - 1 || 1)) * chartW;
+  const yScale = v => PAD.top + chartH - ((v - minVal) / (maxVal - minVal)) * chartH;
+
+  // Grid lines
+  ctx.strokeStyle = '#e0dbd2';
+  ctx.lineWidth = 1;
+  const gridLines = 4;
+  for (let i = 0; i <= gridLines; i++) {
+    const v = minVal + (i / gridLines) * (maxVal - minVal);
+    const y = yScale(v);
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, y);
+    ctx.lineTo(PAD.left + chartW, y);
+    ctx.stroke();
+    ctx.fillStyle = '#7a7570';
+    ctx.font = '10px Trebuchet MS';
+    ctx.textAlign = 'right';
+    ctx.fillText(v.toFixed(1), PAD.left - 6, y + 3);
+  }
+
+  // Draw scheduled hours line (dashed grey)
+  ctx.beginPath();
+  ctx.strokeStyle = '#b0a898';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  data.forEach((d, i) => {
+    const x = xScale(i), y = yScale(d.sched_hours);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw est hours line (accent color)
+  ctx.beginPath();
+  ctx.strokeStyle = '#c8502a';
+  ctx.lineWidth = 2.5;
+  data.forEach((d, i) => {
+    const x = xScale(i), y = yScale(d.est_hours);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Dots on est hours line, colored by over/under
+  data.forEach((d, i) => {
+    const x = xScale(i), y = yScale(d.est_hours);
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = d.est_hours > d.sched_hours ? '#c8502a' : '#2e7d52';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
+  // X axis labels (show every N-th label to avoid crowding)
+  const step = Math.ceil(data.length / 10);
+  ctx.fillStyle = '#7a7570';
+  ctx.font = '10px Trebuchet MS';
+  ctx.textAlign = 'center';
+  data.forEach((d, i) => {
+    if (i % step !== 0 && i !== data.length - 1) return;
+    const x = xScale(i);
+    const label = new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    ctx.fillText(label, x, H - PAD.bottom + 14);
+  });
+
+  // Legend
+  const lx = PAD.left + chartW - 10;
+  const ly = PAD.top + 8;
+  ctx.fillStyle = '#c8502a';
+  ctx.fillRect(lx - 80, ly, 14, 3);
+  ctx.fillStyle = '#2c2825';
+  ctx.font = '10px Trebuchet MS';
+  ctx.textAlign = 'left';
+  ctx.fillText('Est. Hrs', lx - 62, ly + 4);
+
+  ctx.strokeStyle = '#b0a898';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(lx - 20, ly + 1);
+  ctx.lineTo(lx - 6, ly + 1);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#2c2825';
+  ctx.fillText('Sched.', lx - 4, ly + 4);
+}
+
+function downloadLaborCSV() {
+  if (laborData.length === 0) { showToast('No data to export'); return; }
+  const headers = ['Date', 'Est. Hours', 'Sched. Hours', '% Utilized', 'Over/Under (hrs)'];
+  const rows = [...laborData].reverse().map(d => [
+    d.date,
+    d.est_hours.toFixed(2),
+    d.sched_hours.toFixed(2),
+    d.utilization != null ? d.utilization : '',
+    d.delta.toFixed(2),
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = REST_NAME.replace(/\s+/g,'_') + '_labor_data.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ============================================================
