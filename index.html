@@ -828,7 +828,7 @@ async function seedEveningPrepItems() {
 async function updatePrepItemData() {
   // Check flag
   try {
-    const chk = await supa('settings?key=eq.prep_data_updated_v1&select=value');
+    const chk = await supa('settings?key=eq.prep_data_updated_v2&select=value');
     const chkd = await chk.json();
     if (Array.isArray(chkd) && chkd.length > 0) return;
   } catch(e) { return; }
@@ -936,6 +936,34 @@ async function updatePrepItemData() {
     ['Vanilla Syrup for FOH - Prep',                                       'Evening prep',         10,  2, '4 qt'],
     ['Whipped Goat Cheese - Prep',                                         'Evening prep',         10,  2, null],
     ['White Rice for Chicken Teriyaki Meatball Dinners - Prep',            'Evening prep',         30,  2, 'DAILY'],
+    // BAKED GOODS PREP
+    ['GF Brownie',                                                         'Baked goods prep',     60,  0, '12 Each'],
+    ['Blondie',                                                            'Baked goods prep',     60,  0, '4 Each'],
+    ['Coffee Cake',                                                        'Baked goods prep',     60,  0, '8 Each'],
+    ['Coffee Cake Crumble',                                                'Baked goods prep',     30,  0, '1 Full 8 qt. Cambro'],
+    ['Zucchini Bread',                                                     'Baked goods prep',     75,  0, '14 Each'],
+    ['Zucchini Bread - Mini',                                              'Baked goods prep',     75,  0, 'AS NEEDED'],
+    ['Lemon Poppy Bread',                                                  'Baked goods prep',     90,  0, '8 Each'],
+    ['Blueberry Muffin Batter',                                            'Baked goods prep',     45,  0, '1 Full 12 qt. Cambro'],
+    ['Coconut Pineapple Muffin',                                           'Baked goods prep',     45,  0, '1 Full 4 qt. Cambro'],
+    ['Coconut Pineapple Topping',                                          'Baked goods prep',     30,  0, '1 Full 2 qt. Cambro'],
+    ['Chocolate Chip Cookie Dough',                                        'Baked goods prep',     35,  0, '2 Full 12 qt. Cambro'],
+    ['Seasonal M&M Cookies',                                               'Baked goods prep',     35,  0, '1 Full 12 qt. Cambro'],
+    ['Seasonal Sugar Cookies',                                             'Baked goods prep',     90,  0, 'AS NEEDED'],
+    ['Oatmeal Cream Pie Cookie Dough',                                     'Baked goods prep',     45,  0, '1 Full 8 qt. Cambro'],
+    ['Oatmeal Cream Pie Cookie Pre-Bake',                                  'Baked goods prep',     15,  0, '30 Each'],
+    ['Oatmeal Cream Pie Filling',                                          'Baked goods prep',     20,  0, '1 Full 2 qt. Cambro'],
+    ['GF / V Peanut Butter Cookie',                                        'Baked goods prep',     75,  0, '1 Full 8 qt. Cambro'],
+    ['GF / V Oreo',                                                        'Baked goods prep',     75,  0, '1 Full 4 qt. Cambro'],
+    ['V Oreo Frosting',                                                    'Baked goods prep',     20,  0, '1 Full 2 qt. Cambro'],
+    ['Peanut Butter Frosting',                                             'Baked goods prep',     20,  0, '2 32 oz Deli Containers'],
+    ['Cream Cheese Frosting',                                              'Baked goods prep',     20,  0, '2 32 oz Deli Containers'],
+    ['Carrot Cake',                                                        'Baked goods prep',     45,  0, '2 Each'],
+    ['Granola',                                                            'Baked goods prep',     45,  0, '1/2 Full Size Plastic Pan'],
+    ['Rice Krispy Treat',                                                  'Baked goods prep',     35,  0, '1 Each'],
+    ['Cinnamon Rolls - Yeast Dough',                                       'Baked goods prep',     45,  0, '4 Each'],
+    ['Cinnamon Rolls - Assembly',                                          'Baked goods prep',     60,  0, '4 Each'],
+    ['Buttermilk Biscuits',                                                'Baked goods prep',     45,  0, '16 Each'],
   ];
 
   // Build a lookup of existing items: name.toLowerCase() -> id
@@ -977,7 +1005,7 @@ async function updatePrepItemData() {
   await supa('settings', {
     method: 'POST',
     prefer: 'resolution=merge-duplicates',
-    body: JSON.stringify({ key: 'prep_data_updated_v1', value: 'true' }),
+    body: JSON.stringify({ key: 'prep_data_updated_v2', value: 'true' }),
   });
 }
 
