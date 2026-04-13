@@ -1380,12 +1380,14 @@ async function loadDayData(date) {
     document.getElementById('save-status').textContent = '';
   }
 
-  // Load integer-keyed assignments from prep_assignments table
+  // Load integer-keyed assignments from prep_assignments table.
+  // Store under String keys so pre-seed checks (assignments[String(dbItem.id)])
+  // correctly find existing saved values and don't overwrite them with defaults.
   const ar = await supa('prep_assignments?prep_date=eq.'+date+'&select=item_id,qty,assigned_to,initials,notes');
   const ad = await ar.json();
   assignments = {};
   (ad||[]).forEach(a => {
-    assignments[a.item_id] = { qty: a.qty, assigned_to: a.assigned_to, initials: a.initials, notes: a.notes };
+    assignments[String(a.item_id)] = { qty: a.qty, assigned_to: a.assigned_to, initials: a.initials, notes: a.notes };
   });
 
   // Load string-keyed assignments (frozen_ and cat_ ids) from settings blob
@@ -1413,7 +1415,8 @@ async function loadDayData(date) {
   frozenForToday.forEach(frozenItem => {
     const dbItem = dbFrozenItems.find(i => i.name.toLowerCase().trim() === frozenItem.name.toLowerCase().trim());
     const itemId = dbItem ? String(dbItem.id) : ('frozen_' + frozenItem.name.replace(/\s+/g,'_'));
-    // Only seed if not already in assignments at all
+    // Only seed if no saved assignment exists at all (undefined).
+    // A saved qty=0 means user intentionally zeroed it — don't overwrite.
     if (assignments[itemId] === undefined) {
       assignments[itemId] = { qty: 1, assigned_to: '', initials: '', notes: '' };
       needsSave = true;
@@ -1520,7 +1523,7 @@ function renderRegularSection(container, section, items) {
   const tbody = document.createElement('tbody');
 
   items.forEach(item => {
-    const asgn = assignments[item.id] || {};
+    const asgn = assignments[String(item.id)] || {};
     const qty = asgn.qty != null ? asgn.qty : '';
     const mins = calcItemMins(item, parseFloat(qty) || 0);
     const hasQty = qty !== '' && parseFloat(qty) > 0;
@@ -1815,7 +1818,7 @@ function updateSummary() {
   let totalItems = 0, totalAssigned = 0, totalMins = fixedBoh || 0;
 
   prepItems.forEach(item => {
-    const asgn = assignments[item.id];
+    const asgn = assignments[String(item.id)];
     if (!asgn) return;
     const qty = parseFloat(asgn.qty) || 0;
     if (qty > 0) {
@@ -1881,7 +1884,7 @@ function onQtyChange(el) {
   const id = el.dataset.id;
   const qty = parseFloat(el.value) || 0;
   if (!assignments[id]) assignments[id] = {};
-  assignments[id].qty = qty > 0 ? qty : null;
+  assignments[id].qty = qty;  // store 0 explicitly so it saves and doesn't revert to default
   el.classList.remove('auto-filled');
 
   const dbItem = prepItems.find(i => String(i.id) === String(id));
@@ -1958,14 +1961,15 @@ async function upsertAssignments() {
   // Integer-keyed records → prep_assignments table
   const records = [];
   Object.entries(assignments).forEach(([itemId, asgn]) => {
-    if (!asgn || (!asgn.qty && !asgn.assigned_to && !asgn.initials && !asgn.notes)) return;
+    // Skip only if nothing meaningful is set (qty null/undefined AND no other fields)
+    if (!asgn || (asgn.qty == null && !asgn.assigned_to && !asgn.initials && !asgn.notes)) return;
     const parsedId = parseInt(itemId);
     // Must be a clean integer (no leading/trailing chars)
     if (isNaN(parsedId) || String(parsedId) !== String(itemId)) return;
     records.push({
       prep_date: currentDate,
       item_id: parsedId,
-      qty: asgn.qty || null,
+      qty: asgn.qty != null ? asgn.qty : null,
       assigned_to: asgn.assigned_to || null,
       initials: asgn.initials || null,
       notes: asgn.notes || null,
