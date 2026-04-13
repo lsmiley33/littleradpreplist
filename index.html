@@ -363,7 +363,6 @@
 <div class="tab" id="tab-catering">
   <h2 style="font-family:var(--font);margin-bottom:16px;">Catering Orders</h2>
   <div class="catering-page">
-    <!-- New Order Form -->
     <div class="catering-order-form">
       <h3>➕ New Order</h3>
       <div class="form-field">
@@ -384,15 +383,11 @@
         <button class="btn-outline" onclick="clearOrderForm()">Clear</button>
       </div>
     </div>
-
-    <!-- Menu Items -->
     <div class="order-items-section">
       <h3>Order Items <span style="font-size:12px;font-weight:400;color:var(--text-muted)">— set qty for items to include</span></h3>
       <div id="catering-menu-groups"></div>
     </div>
   </div>
-
-  <!-- Existing Orders -->
   <div class="orders-list-section">
     <h3>Upcoming Orders</h3>
     <div id="orders-list"></div>
@@ -403,12 +398,10 @@
 <div class="tab" id="tab-notifications">
   <h2 style="font-family:var(--font);margin-bottom:4px;">Notifications</h2>
   <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Showing notifications active today only.</p>
-
   <div class="notif-section">
     <h3>📦 Order Notifications <span style="font-size:12px;font-weight:400;color:var(--text-muted);font-family:var(--font-ui)">— items to ORDER 3 days before prep</span></h3>
     <div id="notif-order-container"></div>
   </div>
-
   <div class="notif-section">
     <h3>🥘 Prep Notifications <span style="font-size:12px;font-weight:400;color:var(--text-muted);font-family:var(--font-ui)">— day before prep day</span></h3>
     <div id="notif-prep-container"></div>
@@ -425,8 +418,6 @@
 <div class="tab" id="tab-settings">
   <h2 style="font-family:var(--font);margin-bottom:16px;">Settings</h2>
   <div class="settings-grid">
-
-    <!-- Restaurant -->
     <div class="settings-card">
       <h3>Restaurant</h3>
       <div class="settings-field">
@@ -442,8 +433,6 @@
         <button class="btn-outline" onclick="reconfigure()">Re-configure Supabase</button>
       </div>
     </div>
-
-    <!-- Staff -->
     <div class="settings-card">
       <h3>Staff Roster</h3>
       <div class="staff-list" id="staff-list"></div>
@@ -452,12 +441,9 @@
         <button class="btn-add" onclick="addStaff()">+ Add</button>
       </div>
     </div>
-
-    <!-- Prep Items (non-catering sections) -->
     <div class="settings-card" style="grid-column:1/-1;">
       <h3>Prep Items</h3>
       <div class="section-tabs" id="settings-section-tabs"></div>
-      <!-- Regular prep items table (hidden when Catering tab active) -->
       <div id="prep-items-table-wrap" style="overflow-x:auto;">
         <table class="items-table">
           <thead>
@@ -472,7 +458,6 @@
           <tbody id="items-tbody"></tbody>
         </table>
       </div>
-      <!-- Catering items table (shown when Catering tab active) -->
       <div id="catering-items-wrap" style="display:none;overflow-x:auto;">
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Toggle "Has Prep" to add a PREP step (day before CPD). All items always get an ASSEMBLE step on CPD. Qty &gt; 1 adds 30% time.</p>
         <table class="catering-items-table">
@@ -499,8 +484,6 @@
         <button class="btn-outline" id="new-item-btn" onclick="toggleAddForm()">+ New Item</button>
       </div>
     </div>
-
-    <!-- Catering Items — rendered inside the unified Prep Items card via section tabs -->
   </div>
 </div>
 
@@ -513,9 +496,9 @@ let prepItems = [], staff = [], assignments = {}, currentDate = '', schedHours =
 let saveDebounce = null;
 let settingsSectionIdx = 0;
 let currentSectionFilter = 'all';
-let cateringItems = [];   // from DB: catering_items table
-let cateringOrders = [];  // from DB: catering_orders table
-let pendingOrderItems = {}; // itemId -> qty while building a new order
+let cateringItems = [];
+let cateringOrders = [];
+let pendingOrderItems = {};
 
 // FROZEN PREP DATA
 const FROZEN_ITEMS_BY_DAY = {
@@ -563,7 +546,6 @@ const FROZEN_ITEMS_BY_DAY = {
   ],
 };
 
-// Section order — Catering is last but managed separately in settings
 const SECTION_ORDER = [
   'Breakfast prep',
   'Baked goods breakfast',
@@ -573,19 +555,25 @@ const SECTION_ORDER = [
   'Baked goods prep',
   'Evening prep',
 ];
-// Settings prep-items section tabs (excludes Catering — handled separately)
 const SETTINGS_SECTION_ORDER = [...SECTION_ORDER, 'Catering'];
 
+// ============================================================
+// SUPABASE HELPER
+// ============================================================
 function supa(path, opts={}) {
+  // Build headers: start with required auth headers, then merge any extra opts.headers
+  const headers = {
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + SUPA_KEY,
+    'Content-Type': 'application/json',
+    ...(opts.headers || {}),
+  };
+  // Only set Prefer if we have a value (empty string causes issues)
+  if (opts.prefer) headers['Prefer'] = opts.prefer;
+
   return fetch(SUPA_URL + '/rest/v1/' + path, {
     ...opts,
-    headers: {
-      'apikey': SUPA_KEY,
-      'Authorization': 'Bearer ' + SUPA_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': opts.prefer || '',
-      ...(opts.headers||{}),
-    }
+    headers,
   });
 }
 
@@ -653,22 +641,18 @@ async function init() {
   }
   showLoading(false);
 
-  // Default CPD to tomorrow
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   document.getElementById('cat-cpd').value = fmtDate(tomorrow);
-  // Default event date to day after tomorrow
   const dayAfter = new Date();
   dayAfter.setDate(dayAfter.getDate() + 2);
   document.getElementById('cat-event-date').value = fmtDate(dayAfter);
 }
 
 // ============================================================
-// ENSURE CATERING TABLES EXIST (graceful check via GET)
+// ENSURE CATERING TABLES
 // ============================================================
 async function ensureCateringTables() {
-  // We just attempt to load — if tables don't exist, we show a setup hint
-  // Tables must be created manually in Supabase. See console for SQL.
   const r = await supa('catering_items?limit=1');
   if (!r.ok) {
     console.warn('catering_items table may not exist. Run the SQL setup below in Supabase:');
@@ -746,7 +730,6 @@ async function persistFixedBoh(val) {
     await supa('settings', {
       method: 'POST',
       prefer: 'resolution=merge-duplicates',
-      headers: { 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify({ key: 'fixed_boh', value: String(val) })
     });
   } catch(e) {}
@@ -792,7 +775,7 @@ async function deleteStaff(id) {
 }
 
 // ============================================================
-// PREP ITEMS (non-catering)
+// PREP ITEMS
 // ============================================================
 async function loadPrepItems() {
   const r = await supa('prep_items?select=id,name,section,mins,unit_qty,sort_order&order=sort_order,id');
@@ -816,15 +799,13 @@ function switchSettingsSection(idx) {
 function renderSettingsItems(idx) {
   const section = SETTINGS_SECTION_ORDER[idx];
   const isCatering = section === 'Catering';
-  // Toggle which table is visible
   document.getElementById('prep-items-table-wrap').style.display = isCatering ? 'none' : '';
   document.getElementById('catering-items-wrap').style.display = isCatering ? '' : 'none';
   document.getElementById('add-item-form').style.display = isCatering ? 'none' : '';
-  const newItemBtn = document.getElementById('new-item-btn'); if(newItemBtn) newItemBtn.style.display = isCatering ? 'none' : '';
-  if (isCatering) {
-    renderCateringItemsSettings();
-    return;
-  }
+  const newItemBtn = document.getElementById('new-item-btn');
+  if (newItemBtn) newItemBtn.style.display = isCatering ? 'none' : '';
+  if (isCatering) { renderCateringItemsSettings(); return; }
+
   const items = prepItems.filter(i=>i.section===section);
   const tbody = document.getElementById('items-tbody');
   tbody.innerHTML = items.map(item=>`
@@ -894,10 +875,7 @@ async function loadCateringItems() {
     const d = await r.json();
     if (Array.isArray(d)) {
       cateringItems = d;
-      // Seed if empty
-      if (cateringItems.length === 0) {
-        await seedCateringItems();
-      }
+      if (cateringItems.length === 0) await seedCateringItems();
     }
   } catch(e) { console.error('loadCateringItems', e); }
   renderCateringItemsSettings();
@@ -957,8 +935,7 @@ async function seedCateringItems() {
 
   try {
     const r = await supa('catering_items', {
-      method: 'POST',
-      prefer: 'return=representation',
+      method: 'POST', prefer: 'return=representation',
       body: JSON.stringify(seed)
     });
     const d = await r.json();
@@ -1030,7 +1007,6 @@ async function loadCateringOrders() {
     const r = await supa('catering_orders?select=id,customer_name,event_date,cpd,created_at&order=cpd');
     const orders = await r.json();
     if (!Array.isArray(orders)) { cateringOrders = []; return; }
-    // Load line items for each order
     const itemsR = await supa('catering_order_items?select=id,order_id,catering_item_id,qty');
     const allItems = await itemsR.json();
     cateringOrders = orders.map(o => ({
@@ -1070,8 +1046,7 @@ function renderCateringOrderForm() {
 }
 
 function toggleSegment(headerEl) {
-  const body = headerEl.nextElementSibling;
-  body.classList.toggle('open');
+  headerEl.nextElementSibling.classList.toggle('open');
 }
 
 function setPendingQty(itemId, val) {
@@ -1091,15 +1066,12 @@ async function submitCateringOrder() {
 
   showLoading(true);
   try {
-    // Insert order
     const oR = await supa('catering_orders', {
       method:'POST', prefer:'return=representation',
       body: JSON.stringify({ customer_name: name, event_date: eventDate, cpd })
     });
     const oD = await oR.json();
     const orderId = oD[0].id;
-
-    // Insert line items
     const lineItems = Object.entries(pendingOrderItems).map(([itemId, qty]) => ({
       order_id: orderId, catering_item_id: parseInt(itemId), qty
     }));
@@ -1107,7 +1079,6 @@ async function submitCateringOrder() {
       method:'POST', prefer:'return=minimal',
       body: JSON.stringify(lineItems)
     });
-
     showToast('Order saved!');
     clearOrderForm();
     await loadCateringOrders();
@@ -1150,7 +1121,6 @@ function renderOrdersList() {
         ${catItem && catItem.has_prep ? '<span style="font-size:10px;background:var(--yellow-light);color:var(--yellow);padding:2px 6px;border-radius:8px;border:1px solid #fde68a;">+ Prep</span>' : ''}
       </div>`;
     }).join('');
-
     return `<div class="order-card">
       <div class="order-card-header" onclick="toggleOrderDetail('od-${idx}')">
         <div>
@@ -1165,9 +1135,7 @@ function renderOrdersList() {
   };
 
   let html = '';
-  if (upcoming.length > 0) {
-    html += upcoming.map((o,i) => renderOrder(o, 'u'+i)).join('');
-  }
+  if (upcoming.length > 0) html += upcoming.map((o,i) => renderOrder(o, 'u'+i)).join('');
   if (past.length > 0) {
     html += `<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px;">Past Orders</div>`;
     html += past.map((o,i) => renderOrder(o, 'p'+i)).join('');
@@ -1191,33 +1159,23 @@ async function deleteCateringOrder(id) {
 
 // ============================================================
 // GET CATERING ITEMS FOR A DATE
-// Returns list of {catItem, qty, type:'prep'|'assemble', orderName}
-// prep items appear on CPD - 1, assemble on CPD
 // ============================================================
 function getCateringItemsForDate(dateStr) {
   const result = [];
-  const prevDay = getDateOffset(dateStr, +1); // if dateStr is prep day, CPD = dateStr + 1
-
   cateringOrders.forEach(order => {
     const cpdDate = order.cpd;
-    const prepDate = getDateOffset(cpdDate, -1); // day before CPD
-
+    const prepDate = getDateOffset(cpdDate, -1);
     order.items.forEach(li => {
       const catItem = cateringItems.find(ci => ci.id === li.catering_item_id);
       if (!catItem) return;
-
-      // ASSEMBLE row: appears on CPD
       if (cpdDate === dateStr) {
         result.push({ catItem, qty: li.qty, type: 'assemble', orderName: order.customer_name, orderId: order.id });
       }
-
-      // PREP row: appears on CPD - 1 (only if has_prep)
       if (catItem.has_prep && prepDate === dateStr) {
         result.push({ catItem, qty: li.qty, type: 'prep', orderName: order.customer_name, orderId: order.id });
       }
     });
   });
-
   return result;
 }
 
@@ -1236,34 +1194,19 @@ function renderNotifications() {
   const prepContainer = document.getElementById('notif-prep-container');
   if (!orderContainer || !prepContainer) return;
 
-  // ORDER notifications: today = CPD - 3, so CPD = today + 3
-  // Only for items with has_prep (special order items)
-  const orderNotifs = [];
-  const prepNotifs = [];
-
+  const orderNotifs = [], prepNotifs = [];
   cateringOrders.forEach(order => {
     const cpdDate = order.cpd;
     const prepDate = getDateOffset(cpdDate, -1);
-    const orderNotifDate = getDateOffset(cpdDate, -3); // CPD - 3
-
+    const orderNotifDate = getDateOffset(cpdDate, -3);
     order.items.forEach(li => {
       const catItem = cateringItems.find(ci => ci.id === li.catering_item_id);
       if (!catItem) return;
-
-      // ORDER notification: today === CPD - 3, item HAS prep (special order needed)
-      if (orderNotifDate === today && catItem.has_prep) {
-        orderNotifs.push({ catItem, qty: li.qty, order, cpdDate, prepDate });
-      }
-
-      // PREP notification: today === CPD - 1 (prep day is tomorrow = CPD)
-      // For items WITHOUT has_prep: reminder to make extra of regular stock
-      if (prepDate === today && !catItem.has_prep) {
-        prepNotifs.push({ catItem, qty: li.qty, order, cpdDate });
-      }
+      if (orderNotifDate === today && catItem.has_prep) orderNotifs.push({ catItem, qty: li.qty, order, cpdDate, prepDate });
+      if (prepDate === today && !catItem.has_prep) prepNotifs.push({ catItem, qty: li.qty, order, cpdDate });
     });
   });
 
-  // Render ORDER notifications (grouped by order)
   if (orderNotifs.length === 0) {
     orderContainer.innerHTML = '<div class="empty-notif">No order notifications for today.</div>';
   } else {
@@ -1287,7 +1230,6 @@ function renderNotifications() {
     `).join('');
   }
 
-  // Render PREP notifications (day before CPD — regular items, make extra)
   if (prepNotifs.length === 0) {
     prepContainer.innerHTML = '<div class="empty-notif">No prep notifications for today.</div>';
   } else {
@@ -1326,7 +1268,6 @@ function updateNotifBadge() {
       if (prepDate === today && !catItem.has_prep) count++;
     });
   });
-
   const btn = document.getElementById('notif-tab-btn');
   const existing = btn.querySelector('.notif-badge');
   if (existing) existing.remove();
@@ -1339,7 +1280,7 @@ function updateNotifBadge() {
 }
 
 // ============================================================
-// DRAG & DROP (Settings)
+// DRAG & DROP
 // ============================================================
 let dragId = null;
 function dragStart(e, id) { dragId = id; e.currentTarget.classList.add('dragging'); }
@@ -1422,6 +1363,7 @@ async function onDateChange() {
 }
 
 async function loadDayData(date) {
+  // Load scheduled hours / saved state
   const dpr = await supa('prep_days?prep_date=eq.'+date+'&select=scheduled_hours,saved_at');
   const dpd = await dpr.json();
   if (dpd && dpd.length > 0) {
@@ -1438,6 +1380,7 @@ async function loadDayData(date) {
     document.getElementById('save-status').textContent = '';
   }
 
+  // Load integer-keyed assignments from prep_assignments table
   const ar = await supa('prep_assignments?prep_date=eq.'+date+'&select=item_id,qty,assigned_to,initials,notes');
   const ad = await ar.json();
   assignments = {};
@@ -1445,19 +1388,53 @@ async function loadDayData(date) {
     assignments[a.item_id] = { qty: a.qty, assigned_to: a.assigned_to, initials: a.initials, notes: a.notes };
   });
 
-  // Load string-keyed overrides (frozen + catering) from settings JSON blob
+  // Load string-keyed assignments (frozen_ and cat_ ids) from settings blob
+  let existingStrAsgn = null;
   try {
     const sr = await supa('settings?key=eq.string_asgn_'+date+'&select=value');
     const sd = await sr.json();
-    console.log('[LOAD] settings raw response for string_asgn_'+date+':', JSON.stringify(sd));
     if (Array.isArray(sd) && sd.length > 0) {
-      const strAsgn = JSON.parse(sd[0].value) || {};
-      console.log('[LOAD] loaded string assignments:', JSON.stringify(strAsgn));
-      Object.assign(assignments, strAsgn);
-    } else {
-      console.log('[LOAD] no string assignments found for', date);
+      existingStrAsgn = JSON.parse(sd[0].value) || {};
+      Object.assign(assignments, existingStrAsgn);
     }
-  } catch(e) { console.error('[LOAD] error loading string assignments:', e); }
+  } catch(e) { console.error('Error loading string assignments:', e); }
+
+  // ----------------------------------------------------------------
+  // FIX: Pre-seed defaults for frozen and catering items that don't
+  // yet have a saved assignment. Then immediately persist them so
+  // they survive a refresh without the user having to touch anything.
+  // ----------------------------------------------------------------
+  let needsSave = false;
+
+  // Pre-seed frozen items for this date
+  const dayName = getDayName(date);
+  const frozenForToday = FROZEN_ITEMS_BY_DAY[dayName] || [];
+  const dbFrozenItems = prepItems.filter(i => i.section === 'Frozen prep');
+  frozenForToday.forEach(frozenItem => {
+    const dbItem = dbFrozenItems.find(i => i.name.toLowerCase().trim() === frozenItem.name.toLowerCase().trim());
+    const itemId = dbItem ? String(dbItem.id) : ('frozen_' + frozenItem.name.replace(/\s+/g,'_'));
+    // Only seed if not already in assignments at all
+    if (assignments[itemId] === undefined) {
+      assignments[itemId] = { qty: 1, assigned_to: '', initials: '', notes: '' };
+      needsSave = true;
+    }
+  });
+
+  // Pre-seed catering items for this date
+  const cateringForDate = getCateringItemsForDate(date);
+  cateringForDate.forEach(entry => {
+    const { catItem, qty, type, orderId } = entry;
+    const pseudoId = `cat_${orderId}_${catItem.id}_${type}`;
+    if (assignments[pseudoId] === undefined) {
+      assignments[pseudoId] = { qty: qty, assigned_to: '', initials: '', notes: '' };
+      needsSave = true;
+    }
+  });
+
+  // If we seeded any new defaults, persist them immediately
+  if (needsSave) {
+    await persistStringAssignments(date);
+  }
 
   await loadFixedBoh();
 
@@ -1466,6 +1443,32 @@ async function loadDayData(date) {
     '  |  Scheduled: ' + (schedHours||'—') + ' hrs  |  Fixed BOH: ' + fixedBoh + ' min';
 
   renderPrepList();
+}
+
+// ============================================================
+// PERSIST STRING ASSIGNMENTS (standalone helper)
+// ============================================================
+async function persistStringAssignments(date) {
+  const strAsgn = {};
+  Object.entries(assignments).forEach(([itemId, asgn]) => {
+    // A key is "string" if it cannot be parsed as an integer
+    if (isNaN(parseInt(itemId)) || String(parseInt(itemId)) !== String(itemId)) {
+      strAsgn[itemId] = asgn;
+    }
+  });
+  try {
+    const resp = await supa('settings', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates',
+      body: JSON.stringify({ key: 'string_asgn_' + date, value: JSON.stringify(strAsgn) })
+    });
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error('persistStringAssignments failed:', resp.status, err);
+    }
+  } catch(e) {
+    console.error('persistStringAssignments error:', e);
+  }
 }
 
 // ============================================================
@@ -1560,7 +1563,7 @@ function renderCateringSection(container) {
   header.innerHTML = `🍽 Catering <span class="sec-count" id="sec-count-Catering"></span>`;
   block.appendChild(header);
 
-  // Group by order
+  // Group by order+type
   const byOrder = {};
   cateringForDate.forEach(entry => {
     const key = entry.orderId + '-' + entry.type;
@@ -1587,36 +1590,33 @@ function renderCateringSection(container) {
     const tbody = document.createElement('tbody');
 
     group.entries.forEach(entry => {
-      const { catItem, qty, type } = entry;
+      const { catItem, qty: orderQty, type } = entry;
       const pseudoId = `cat_${entry.orderId}_${catItem.id}_${type}`;
       const asgn = assignments[pseudoId] || {};
       const baseMins = type === 'prep' ? (catItem.prep_time||0) : (catItem.assemble_time||5);
-      // Step function: qty > 1 → +30%
-      const estMins = qty > 1 ? Math.round(baseMins * 1.3) : baseMins;
-      const asgnQty = asgn.qty != null ? asgn.qty : qty; // default to order qty
+      // Use saved qty if available, fall back to order qty
+      const asgnQty = asgn.qty != null ? asgn.qty : orderQty;
+      const estMins = asgnQty > 1 ? Math.round(baseMins * 1.3) : (asgnQty === 1 ? baseMins : 0);
+      // Determine if this is displaying the default (unsaved) qty
+      const isDefault = asgn.qty == null;
 
       const tr = document.createElement('tr');
       tr.dataset.itemId = pseudoId;
 
       tr.innerHTML = `
         <td class="item-name">${escHtml(catItem.name)}</td>
-        <td><input class="qty-input catering-auto" type="number" min="0" value="${asgnQty}"
+        <td><input class="qty-input${isDefault ? ' catering-auto' : ''}" type="number" min="0" value="${asgnQty}"
           data-id="${escHtml(pseudoId)}" data-base-mins="${baseMins}"
           onchange="onCateringQtyChange(this)" oninput="onCateringQtyChange(this)" /></td>
         <td><select class="assign-select" data-id="${escHtml(pseudoId)}" onchange="onAssignChange(this)">
           <option value="">—</option>
           ${staff.map(s=>`<option value="${escHtml(s.name)}"${asgn.assigned_to===s.name?' selected':''}>${escHtml(s.name)}</option>`).join('')}
         </select></td>
-        <td class="item-time active" id="time-${pseudoId}">${estMins > 0 ? estMins + ' min' : ''}</td>
+        <td class="item-time${estMins > 0 ? ' active' : ''}" id="time-${pseudoId}">${estMins > 0 ? estMins + ' min' : ''}</td>
         <td><input class="initials-input" type="text" value="${escHtml(asgn.initials||'')}" data-id="${escHtml(pseudoId)}" onchange="onFieldChange(this,'initials')" /></td>
         <td><input class="notes-input" type="text" value="${escHtml(asgn.notes||'')}" data-id="${escHtml(pseudoId)}" onchange="onFieldChange(this,'notes')" /></td>
       `;
       tbody.appendChild(tr);
-
-      // Pre-seed catering assignment with order qty (in-memory only, saved on change)
-      if (!assignments[pseudoId]) {
-        assignments[pseudoId] = { qty: qty, assigned_to: '', initials: '', notes: '' };
-      }
     });
 
     table.appendChild(tbody);
@@ -1632,7 +1632,7 @@ function onCateringQtyChange(el) {
   const qty = parseFloat(el.value) || 0;
   const baseMins = parseFloat(el.dataset.baseMins) || 0;
   if (!assignments[id]) assignments[id] = {};
-  assignments[id].qty = qty > 0 ? qty : null;
+  assignments[id].qty = qty;
   el.classList.remove('catering-auto');
 
   const estMins = qty > 1 ? Math.round(baseMins * 1.3) : (qty === 1 ? baseMins : 0);
@@ -1686,19 +1686,23 @@ function renderFrozenSection(container, frozenForToday, dayName) {
 
     frozenForToday.forEach(frozenItem => {
       const dbItem = dbFrozenItems.find(i => i.name.toLowerCase().trim() === frozenItem.name.toLowerCase().trim());
-      const itemId = dbItem ? dbItem.id : ('frozen_' + frozenItem.name.replace(/\s+/g,'_'));
+      const itemId = dbItem ? String(dbItem.id) : ('frozen_' + frozenItem.name.replace(/\s+/g,'_'));
       const asgn = assignments[itemId] || {};
+      // qty is always set (pre-seeded in loadDayData), use it directly
       const qty = asgn.qty != null ? asgn.qty : 1;
       const mins = dbItem ? calcItemMins(dbItem, parseFloat(qty)||0) : frozenItem.mins;
-      const isAutoFilled = asgn.qty == null;
-      const hasQty = parseFloat(qty) > 0;
+      // Show blue styling only if qty came from pre-seed (not user-edited)
+      // We can detect this by checking if assigned_to/initials/notes are all empty
+      const isDefaultLook = !asgn.assigned_to && !asgn.initials && !asgn.notes && qty === 1;
 
       const tr = document.createElement('tr');
       tr.dataset.itemId = itemId;
-      if (!hasQty) tr.classList.add('prep-row-noqty');
+      if (!(parseFloat(qty) > 0)) tr.classList.add('prep-row-noqty');
       tr.innerHTML = `
         <td class="item-name">${escHtml(frozenItem.name)}</td>
-        <td><input class="qty-input${isAutoFilled?' auto-filled':''}" type="number" min="0" value="${qty}" data-id="${escHtml(itemId)}" onchange="onQtyChange(this)" oninput="onQtyChange(this)" /></td>
+        <td><input class="qty-input${isDefaultLook ? ' auto-filled' : ''}" type="number" min="0" value="${qty}"
+          data-id="${escHtml(itemId)}"
+          onchange="onQtyChange(this)" oninput="onQtyChange(this)" /></td>
         <td><select class="assign-select" data-id="${escHtml(itemId)}" onchange="onAssignChange(this)">
           <option value="">—</option>
           ${staff.map(s=>`<option value="${escHtml(s.name)}"${asgn.assigned_to===s.name?' selected':''}>${escHtml(s.name)}</option>`).join('')}
@@ -1708,15 +1712,13 @@ function renderFrozenSection(container, frozenForToday, dayName) {
         <td><input class="notes-input" type="text" value="${escHtml(asgn.notes||'')}" data-id="${escHtml(itemId)}" onchange="onFieldChange(this,'notes')" /></td>
       `;
       tbody.appendChild(tr);
-      if (asgn.qty == null && !assignments[itemId]) {
-        assignments[itemId] = { qty: 1, assigned_to: '', initials: '', notes: '' };
-      }
     });
 
     table.appendChild(tbody);
     block.appendChild(table);
   }
 
+  // Other frozen items not on today's schedule
   const todayNames = frozenForToday.map(f => f.name.toLowerCase().trim());
   const otherDbItems = dbFrozenItems.filter(i => !todayNames.includes(i.name.toLowerCase().trim()));
 
@@ -1827,26 +1829,27 @@ function updateSummary() {
   const frozenForToday = FROZEN_ITEMS_BY_DAY[dayName] || [];
   frozenForToday.forEach(fi => {
     const dbItem = prepItems.find(i => i.section==='Frozen prep' && i.name.toLowerCase().trim()===fi.name.toLowerCase().trim());
-    const realId = dbItem ? dbItem.id : ('frozen_' + fi.name.replace(/\s+/g,'_'));
+    const realId = dbItem ? String(dbItem.id) : ('frozen_' + fi.name.replace(/\s+/g,'_'));
     const asgn = assignments[realId];
-    const qty = asgn ? (parseFloat(asgn.qty)||0) : 1;
+    if (!asgn) return;
+    const qty = parseFloat(asgn.qty) || 0;
     if (qty > 0) {
       totalItems++;
-      if (asgn && asgn.assigned_to) totalAssigned++;
+      if (asgn.assigned_to) totalAssigned++;
       totalMins += dbItem ? calcItemMins(dbItem, qty) : fi.mins;
     }
   });
 
-  // Catering items for today
   const cateringForDate = getCateringItemsForDate(currentDate);
   cateringForDate.forEach(entry => {
     const { catItem, qty: orderQty, type, orderId } = entry;
     const pseudoId = `cat_${orderId}_${catItem.id}_${type}`;
     const asgn = assignments[pseudoId];
-    const qty = asgn && asgn.qty != null ? (parseFloat(asgn.qty)||0) : orderQty;
+    if (!asgn) return;
+    const qty = asgn.qty != null ? parseFloat(asgn.qty) : orderQty;
     if (qty > 0) {
       totalItems++;
-      if (asgn && asgn.assigned_to) totalAssigned++;
+      if (asgn.assigned_to) totalAssigned++;
       const baseMins = type === 'prep' ? (catItem.prep_time||0) : (catItem.assemble_time||5);
       totalMins += qty > 1 ? Math.round(baseMins * 1.3) : baseMins;
     }
@@ -1880,9 +1883,8 @@ function onQtyChange(el) {
   if (!assignments[id]) assignments[id] = {};
   assignments[id].qty = qty > 0 ? qty : null;
   el.classList.remove('auto-filled');
-  if (isNaN(parseInt(id))) console.log('[CHANGE] string id qty change:', id, '->', qty, 'assignments[id]:', JSON.stringify(assignments[id]));
 
-  const dbItem = prepItems.find(i => i.id == id);
+  const dbItem = prepItems.find(i => String(i.id) === String(id));
   const timeEl = document.getElementById('time-' + id);
   if (timeEl) {
     const mins = dbItem ? calcItemMins(dbItem, qty) : 0;
@@ -1953,11 +1955,13 @@ async function saveDay() {
 }
 
 async function upsertAssignments() {
+  // Integer-keyed records → prep_assignments table
   const records = [];
   Object.entries(assignments).forEach(([itemId, asgn]) => {
-    if (!asgn.qty && !asgn.assigned_to && !asgn.initials && !asgn.notes) return;
+    if (!asgn || (!asgn.qty && !asgn.assigned_to && !asgn.initials && !asgn.notes)) return;
     const parsedId = parseInt(itemId);
-    if (isNaN(parsedId)) return;
+    // Must be a clean integer (no leading/trailing chars)
+    if (isNaN(parsedId) || String(parsedId) !== String(itemId)) return;
     records.push({
       prep_date: currentDate,
       item_id: parsedId,
@@ -1981,26 +1985,8 @@ async function upsertAssignments() {
     }
   }
 
-  // Save string-keyed overrides (frozen_ and cat_ ids) to settings JSON blob
-  const strAsgn = {};
-  Object.entries(assignments).forEach(([itemId, asgn]) => {
-    if (isNaN(parseInt(itemId))) strAsgn[itemId] = asgn;
-  });
-  console.log('[SAVE] string assignments to save:', JSON.stringify(strAsgn));
-  const strSaveResp = await supa('settings', {
-    method: 'POST',
-    prefer: 'resolution=merge-duplicates',
-    headers: { 'Prefer': 'resolution=merge-duplicates' },
-    body: JSON.stringify({ key: 'string_asgn_' + currentDate, value: JSON.stringify(strAsgn) })
-  });
-  console.log('[SAVE] settings response status:', strSaveResp.status);
-  if (!strSaveResp.ok) {
-    const err = await strSaveResp.text();
-    console.error('[SAVE] FAILED:', err);
-    throw new Error('String assignments save failed: ' + strSaveResp.status + ' ' + err);
-  } else {
-    console.log('[SAVE] string assignments saved OK');
-  }
+  // String-keyed records (frozen_ and cat_ ids) → settings table JSON blob
+  await persistStringAssignments(currentDate);
 }
 
 async function upsertPrepDay(lock) {
