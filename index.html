@@ -1140,8 +1140,27 @@ async function deleteStaff(id) {
 async function loadPrepItems() {
   const r = await supa('prep_items?select=id,name,section,mins,unit_qty,sort_order,prep_when&order=sort_order,id');
   prepItems = await r.json();
+  // Sync prep_when from FROZEN_ITEMS_BY_DAY for any frozen items missing it
+  await syncFrozenPrepWhen();
   renderSettingsItems(settingsSectionIdx);
   buildSettingsSectionTabs();
+}
+
+// Ensures every Frozen prep item has its day stored in prep_when in the DB.
+// Only patches items that are missing it — safe to call on every load.
+async function syncFrozenPrepWhen() {
+  const itemDayMap = {};
+  Object.entries(FROZEN_ITEMS_BY_DAY).forEach(([day, fiArr]) => {
+    fiArr.forEach(fi => { itemDayMap[fi.name.toLowerCase().trim()] = day; });
+  });
+  const missing = prepItems.filter(item =>
+    item.section === 'Frozen prep' && !item.prep_when && itemDayMap[item.name.toLowerCase().trim()]
+  );
+  for (const item of missing) {
+    const day = itemDayMap[item.name.toLowerCase().trim()];
+    item.prep_when = day;
+    await supa('prep_items?id=eq.' + item.id, { method: 'PATCH', body: JSON.stringify({ prep_when: day }) });
+  }
 }
 
 function buildSettingsSectionTabs() {
@@ -1159,6 +1178,7 @@ function switchSettingsSection(idx) {
 function renderSettingsItems(idx) {
   const section = SETTINGS_SECTION_ORDER[idx];
   const isCatering = section === 'Catering';
+  const isFrozen = section === 'Frozen prep';
   document.getElementById('prep-items-table-wrap').style.display = isCatering ? 'none' : '';
   document.getElementById('catering-items-wrap').style.display = isCatering ? '' : 'none';
   document.getElementById('add-item-form').style.display = isCatering ? 'none' : '';
@@ -1168,6 +1188,64 @@ function renderSettingsItems(idx) {
 
   const items = prepItems.filter(i=>i.section===section);
   const tbody = document.getElementById('items-tbody');
+
+  if (isFrozen) {
+    // Build day map: day -> items, using prep_when from DB (falls back to FROZEN_ITEMS_BY_DAY)
+    const DAY_ORDER = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday','Unscheduled'];
+    const DAY_OPTIONS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+    // Seed prep_when from FROZEN_ITEMS_BY_DAY for items that don't have it yet
+    const itemDayMap = {};
+    Object.entries(FROZEN_ITEMS_BY_DAY).forEach(([day, fiArr]) => {
+      fiArr.forEach(fi => { itemDayMap[fi.name.toLowerCase().trim()] = day; });
+    });
+    items.forEach(item => {
+      if (!item.prep_when) {
+        const day = itemDayMap[item.name.toLowerCase().trim()];
+        if (day) item.prep_when = day; // in-memory only until user saves
+      }
+    });
+
+    // Group by day
+    const byDay = {};
+    DAY_ORDER.forEach(d => byDay[d] = []);
+    items.forEach(item => {
+      const day = DAY_ORDER.includes(item.prep_when) ? item.prep_when : 'Unscheduled';
+      byDay[day].push(item);
+    });
+
+    let html = '';
+    DAY_ORDER.forEach(day => {
+      const dayItems = byDay[day];
+      if (dayItems.length === 0) return;
+      html += `<tr><td colspan="6" style="background:#e8f0fc;color:#2563a8;font-weight:700;font-size:11px;
+        text-transform:uppercase;letter-spacing:.05em;padding:6px 10px;border-bottom:1px solid #c8d8f0;">
+        ${day}</td></tr>`;
+      dayItems.forEach(item => {
+        const dayOpts = DAY_OPTIONS.map(d =>
+          `<option value="${d}"${item.prep_when===d?' selected':''}>${d}</option>`
+        ).join('');
+        html += `<tr draggable="true" data-id="${item.id}"
+          ondragstart="dragStart(event,${item.id})"
+          ondragover="dragOver(event)"
+          ondrop="dropItem(event,${item.id})"
+          ondragleave="dragLeave(event)">
+          <td><span class="drag-handle">⠿</span></td>
+          <td><input type="text" value="${escHtml(item.name)}" onchange="updateItem(${item.id},'name',this.value)" style="min-width:200px;" /></td>
+          <td><select onchange="updateFrozenDay(${item.id},this.value)" style="padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--font-ui);">
+            <option value="">— day —</option>${dayOpts}
+          </select></td>
+          <td><input type="number" value="${item.mins||0}" onchange="updateItem(${item.id},'mins',this.value)" /></td>
+          <td><input type="number" value="${item.unit_qty||0}" onchange="updateItem(${item.id},'unit_qty',this.value)" /></td>
+          <td><button class="btn-icon" onclick="deleteItem(${item.id})">🗑</button></td>
+        </tr>`;
+      });
+    });
+    tbody.innerHTML = html || '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted)">No frozen items yet.</td></tr>';
+    return;
+  }
+
+  // Standard section rendering
   tbody.innerHTML = items.map(item=>`
     <tr draggable="true" data-id="${item.id}"
       ondragstart="dragStart(event,${item.id})"
@@ -1183,14 +1261,47 @@ function renderSettingsItems(idx) {
     </tr>
   `).join('');
   if (items.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text-muted)">No items in this section yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted)">No items in this section yet.</td></tr>';
   }
 }
 
 async function updateItem(id, field, val) {
   const item = prepItems.find(i=>i.id===id);
   if (!item) return;
-  item[field] = (field==='mins'||field==='unit_qty') ? (parseFloat(val)||0) : val;  await supa('prep_items?id=eq.'+id, { method:'PATCH', body: JSON.stringify({[field]: item[field]}) });
+  item[field] = (field==='mins'||field==='unit_qty') ? (parseFloat(val)||0) : val;
+  await supa('prep_items?id=eq.'+id, { method:'PATCH', body: JSON.stringify({[field]: item[field]}) });
+  renderPrepList();
+}
+
+async function updateFrozenDay(id, newDay) {
+  const item = prepItems.find(i => i.id === id);
+  if (!item) return;
+  const oldDay = item.prep_when;
+  item.prep_when = newDay || null;
+
+  // Persist to DB
+  await supa('prep_items?id=eq.' + id, { method: 'PATCH', body: JSON.stringify({ prep_when: item.prep_when }) });
+
+  // Rebuild FROZEN_ITEMS_BY_DAY in memory so prep list reflects change immediately
+  // Remove from old day
+  if (oldDay && FROZEN_ITEMS_BY_DAY[oldDay]) {
+    FROZEN_ITEMS_BY_DAY[oldDay] = FROZEN_ITEMS_BY_DAY[oldDay].filter(
+      fi => fi.name.toLowerCase().trim() !== item.name.toLowerCase().trim()
+    );
+  }
+  // Add to new day
+  if (newDay) {
+    if (!FROZEN_ITEMS_BY_DAY[newDay]) FROZEN_ITEMS_BY_DAY[newDay] = [];
+    const alreadyThere = FROZEN_ITEMS_BY_DAY[newDay].some(
+      fi => fi.name.toLowerCase().trim() === item.name.toLowerCase().trim()
+    );
+    if (!alreadyThere) {
+      FROZEN_ITEMS_BY_DAY[newDay].push({ name: item.name, mins: item.mins || 0 });
+    }
+  }
+
+  // Re-render settings (regroups by day) and prep list
+  renderSettingsItems(settingsSectionIdx);
   renderPrepList();
 }
 
