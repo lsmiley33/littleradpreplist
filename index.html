@@ -665,6 +665,8 @@ async function init() {
   try {
     await ensureCateringTables();
     await Promise.all([loadStaff(), loadPrepItems(), loadCateringItems(), loadCateringOrders()]);
+    await seedEveningPrepItems(); // one-time seed, skips if already done
+    await loadPrepItems();        // reload after potential seed
     buildDateDropdown();
     buildSectionFilterDropdown();
     currentDate = document.getElementById('date-select').value;
@@ -686,6 +688,133 @@ async function init() {
   const dayAfter = new Date();
   dayAfter.setDate(dayAfter.getDate() + 2);
   document.getElementById('cat-event-date').value = fmtDate(dayAfter);
+}
+
+// ============================================================
+// ONE-TIME SEED: EVENING PREP ITEMS
+// Checks settings table for a flag; if not set, inserts any
+// missing Evening prep items then sets the flag so it never
+// runs again.
+// ============================================================
+async function seedEveningPrepItems() {
+  // Check if we've already done this seed
+  try {
+    const chk = await supa('settings?key=eq.evening_prep_seeded_v1&select=value');
+    const chkd = await chk.json();
+    if (Array.isArray(chkd) && chkd.length > 0) return; // already done
+  } catch(e) { return; }
+
+  const EVENING_ITEMS = [
+    "Almond Joy Syrup for FOH - Prep",
+    "Arugula Pesto - Prep",
+    "Avocado Mash for Radish Salads - Prep and Portion",
+    "Breakfast Sausage - Bake and Chop",
+    "Brine Chicken Breast - Prep",
+    "Brined Chicken Breast - Bake",
+    "Brined Chicken Breast - Dice",
+    "Brined Chicken Breast - Rub",
+    "Brown Sugar Syrup for FOH - Prep",
+    "Brownie Crumble for FOH - Prep",
+    "Butternut Squash for Salads - Prep",
+    "Butternut Squash for Sandwiches - Prep",
+    "Caesar Dressing - Portion",
+    "Caesar Dressing - Prep",
+    "Cheddar Cheese for Sandwiches - Slice and Prep",
+    "Chia Seed Pudding Base - Prep",
+    "Chicken Dry Rub - Prep",
+    "Chop Chocolate for Chocolate Chip Cookie Dough - Prep for Bakers",
+    "Coconut Syrup for FOH - Prep",
+    "Cookie Crumble for FOH - Prep",
+    "Egg Bites Base- Prep",
+    "Egg White Bites Base - Prep",
+    "Farro - Cook and Prep",
+    "FroYo Base - Prep",
+    "Garlic - Mince and Prep",
+    "Garlic Confit - Prep",
+    "Dijonnaise - Prep",
+    "Honey Mustard - Portion",
+    "Honey Mustard - Prep",
+    "Honey Syrup for FOH - Prep",
+    "Hummus - Portion",
+    "Hummus - Prep",
+    "Kale - Wash and Prep",
+    "Kale Dressing - Prep",
+    "Lavender Syrup for FOH - Prep",
+    "Lemons - Zest and Prep for Bakers",
+    "Lime Syrup for FOH - Prep",
+    "Magic Shell for FOH - Prep",
+    "Maple Syrup for FOH - Prep",
+    "Maple Vinaigrette for Farro - Prep",
+    "Marinate Chicken Tenderloins - Prep",
+    "Mocha Syrup for FOH - Prep",
+    "Pickled Red Onions - Prep",
+    "Pumpkin Seeds - Toast and Prep",
+    "Raspberry Syrup for FOH - Prep",
+    "Red Wine Vinaigrette Dressing - Portion",
+    "Red Wine Vinaigrette Dressing - Prep",
+    "Rice Wine Vinaigrette Dressing - Portion",
+    "Rice Wine Vinaigrette Dressing - Prep",
+    "Salmon Burgers - Prep",
+    "Salmon Burgers - Assembly",
+    "Snack Packs - Assemble and Plate",
+    "Spinach - Wilt and Prep",
+    "Strawberry Syrup for FOH - Prep",
+    "Toasted Almonds for FOH - Toast and Prep",
+    "Tortilla Chips for Radish Salads - Prep and Portion",
+    "Turkey for Salads - Chop and Prep",
+    "Turkey for Sandwiches - Slice and Prep",
+    "Vanilla Syrup for FOH - Prep",
+    "Whipped Goat Cheese - Prep",
+    "White Rice for Chicken Teriyaki Meatball Dinners - Prep",
+  ];
+
+  // Find existing Evening prep names (case-insensitive)
+  const existing = prepItems
+    .filter(i => i.section === 'Evening prep')
+    .map(i => i.name.toLowerCase().trim());
+
+  // Only insert items not already present
+  const toInsert = EVENING_ITEMS.filter(
+    name => !existing.includes(name.toLowerCase().trim())
+  );
+
+  if (toInsert.length > 0) {
+    const maxSort = Math.max(0, ...prepItems.filter(i => i.section === 'Evening prep').map(i => i.sort_order || 0));
+    const records = toInsert.map((name, idx) => ({
+      name,
+      section: 'Evening prep',
+      mins: 0,
+      unit_qty: 0,
+      sort_order: maxSort + idx + 1,
+    }));
+
+    try {
+      const r = await supa('prep_items', {
+        method: 'POST',
+        prefer: 'return=minimal',
+        body: JSON.stringify(records),
+      });
+      if (r.ok) {
+        console.log(`[SEED] Inserted ${toInsert.length} evening prep items`);
+      } else {
+        const err = await r.text();
+        console.error('[SEED] Insert failed:', err);
+        return; // don't mark as done if it failed
+      }
+    } catch(e) {
+      console.error('[SEED] Error:', e);
+      return;
+    }
+  } else {
+    console.log('[SEED] All evening prep items already exist, nothing to insert');
+  }
+
+  // Mark as done so this never runs again
+  await supa('settings', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates',
+    body: JSON.stringify({ key: 'evening_prep_seeded_v1', value: 'true' }),
+  });
 }
 
 // ============================================================
