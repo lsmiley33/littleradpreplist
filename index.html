@@ -2035,33 +2035,56 @@ async function upsertAssignments() {
 }
 
 async function upsertPrepDay(lock) {
-  const body = {
-    prep_date: currentDate,
-    scheduled_hours: schedHours || null,
+  const fields = {
+    scheduled_hours: schedHours != null ? schedHours : null,
     ...(lock ? { saved_at: new Date().toISOString() } : {}),
   };
-  await supa('prep_days', {
-    method: 'POST', prefer: 'resolution=merge-duplicates',
-    body: JSON.stringify(body)
+
+  // Try PATCH first (update existing row)
+  const patchResp = await supa('prep_days?prep_date=eq.' + currentDate, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: JSON.stringify(fields),
   });
+
+  if (patchResp.ok) {
+    // Check if any row was actually updated (Content-Range header tells us)
+    const contentRange = patchResp.headers.get('Content-Range');
+    // Content-Range: */0 means 0 rows matched — need to INSERT instead
+    if (contentRange && contentRange.includes('/0')) {
+      await supa('prep_days', {
+        method: 'POST',
+        prefer: 'return=minimal',
+        body: JSON.stringify({ prep_date: currentDate, ...fields }),
+      });
+    }
+  } else {
+    // PATCH failed — try INSERT as fallback
+    await supa('prep_days', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify({ prep_date: currentDate, ...fields }),
+    });
+  }
 }
 
+let schedHoursDebounce = null;
 async function saveSchedHours() {
   const val = parseFloat(document.getElementById('sched-hours').value);
   schedHours = isNaN(val) ? null : val;
   updateSummary();
-  // Persist immediately — don't wait for an assignment change to trigger auto-save
-  clearTimeout(saveDebounce);
+  clearTimeout(schedHoursDebounce);
   setStatus('saving', '⏳ Saving...');
-  saveDebounce = setTimeout(async () => {
+  schedHoursDebounce = setTimeout(async () => {
     try {
       await upsertPrepDay(false);
       setStatus('saved', '✓ Saved');
       setTimeout(() => setStatus('', ''), 2000);
     } catch(e) {
+      console.error('saveSchedHours error:', e);
       setStatus('error', '⚠ Save error: ' + e.message);
     }
-  }, 800);
+  }, 600);
 }
 
 // ============================================================
