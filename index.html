@@ -489,6 +489,7 @@
             <tr>
               <th style="width:24px;"></th>
               <th>Item Name</th>
+              <th>Prep When</th>
               <th>Base Mins</th>
               <th>Step Qty</th>
               <th></th>
@@ -666,7 +667,8 @@ async function init() {
     await ensureCateringTables();
     await Promise.all([loadStaff(), loadPrepItems(), loadCateringItems(), loadCateringOrders()]);
     await seedEveningPrepItems(); // one-time seed, skips if already done
-    await loadPrepItems();        // reload after potential seed
+    await updatePrepItemData();   // one-time update: mins, unit_qty, prep_when for all items
+    await loadPrepItems();        // reload after potential seed/update
     buildDateDropdown();
     buildSectionFilterDropdown();
     currentDate = document.getElementById('date-select').value;
@@ -818,6 +820,168 @@ async function seedEveningPrepItems() {
 }
 
 // ============================================================
+// ONE-TIME UPDATE: MINS, UNIT_QTY, PREP_WHEN FOR ALL ITEMS
+// Reads from the spreadsheet data embedded here, patches each
+// matching prep_item in the DB. Runs once, flagged in settings.
+// Also adds the prep_when column if it doesn't exist yet.
+// ============================================================
+async function updatePrepItemData() {
+  // Check flag
+  try {
+    const chk = await supa('settings?key=eq.prep_data_updated_v1&select=value');
+    const chkd = await chk.json();
+    if (Array.isArray(chkd) && chkd.length > 0) return;
+  } catch(e) { return; }
+
+  // Attempt to add prep_when column — ignore error if already exists
+  // (PostgREST doesn't expose DDL; we just patch and if the column is missing
+  //  the patch will fail silently on that field — user will need to run SQL once)
+  // We'll detect it by trying a PATCH with prep_when and checking the response.
+
+  // Full item data: [name, section, mins, unit_qty, prep_when]
+  const DATA = [
+    // BREAKFAST PREP
+    ['Egg Bites - Bake and Plate',                                         'Breakfast prep',       20, 30, 'DAILY'],
+    ['Egg Sandwiches - Bake, Assemble, and Plate',                         'Breakfast prep',       20, 30, 'DAILY'],
+    ['Egg White Bites - Bake and Plate',                                   'Breakfast prep',       20, 30, 'DAILY'],
+    ['Chia Seed Pudding - Top with Blueberries',                           'Breakfast prep',       15, 12, 'DAILY'],
+    // BAKED GOODS BREAKFAST
+    ['Blueberry Muffin - Bake and Plate',                                  'Baked goods breakfast',20, 20, 'DAILY'],
+    ['Coconut Pineapple Muffin - Bake and Plate',                          'Baked goods breakfast',15, 20, 'DAILY'],
+    ['Coffee Cake - Slice and Plate',                                      'Baked goods breakfast',10,  4, 'DAILY'],
+    ['Lemon Poppy Bread - Glaze, Slice, and Plate',                        'Baked goods breakfast',10,  4, 'DAILY'],
+    ['Zucchini Bread - Slice and Plate',                                   'Baked goods breakfast',10,  4, 'DAILY'],
+    // LUNCH PREP
+    ['Kale Chicken Caesar Wraps - Prep, Assemble, Wrap, and Plate',        'Lunch prep',           45,  2, 'DAILY'],
+    ['Turkey Sandwich - Assemble, Wrap, and Plate',                        'Lunch prep',           45,  2, 'DAILY'],
+    ['Butternut Squash Sandwich - Assemble, Wrap, and Plate',              'Lunch prep',           45,  2, 'DAILY'],
+    ['Lemony Kale Salad - Assemble and Plate',                             'Lunch prep',           30,  2, 'DAILY'],
+    ['Farro Salad - Assemble and Plate',                                   'Lunch prep',           30,  2, 'DAILY'],
+    ['Veggie Quesadillas - Assemble, Bake, and Plate',                     'Lunch prep',           45,  2, 'DAILY'],
+    ['Chicken Quesadillas - Assemble, Bake, and Plate',                    'Lunch prep',           20,  2, 'DAILY'],
+    ['Asian Chicken Salad - Assemble and Plate',                           'Lunch prep',           30,  2, 'DAILY'],
+    ['Belle Meade Chopped Salad - Assemble and Plate',                     'Lunch prep',           45,  2, 'DAILY'],
+    ['Crunchy Baked Chicken Tenders - Assemble, Bake, and Plate',          'Lunch prep',           45,  2, 'DAILY'],
+    ['Grilled Chicken w/ Arugula Pesto - Bake, Assemble, and Plate',       'Lunch prep',           25,  2, 'DAILY'],
+    // BAKED GOODS LUNCH
+    ['Chocolate Chip Cookies - Bake and Plate',                            'Baked goods lunch',    10,  2, 'DAILY'],
+    ['Peanut Butter Cookies - Bake and Plate',                             'Baked goods lunch',    10,  2, 'DAILY'],
+    ['Oreos - Bake, Assemble, and Plate',                                  'Baked goods lunch',    20,  2, 'DAILY'],
+    ['Brownies - Slice and Plate',                                         'Baked goods lunch',    10,  2, 'DAILY'],
+    ['Carrot Cake - Frost, Slice, and Plate',                              'Baked goods lunch',    15,  2, 'DAILY'],
+    ['Oatmeal Cream Pie Cookies - Assemble and Plate',                     'Baked goods lunch',    15,  2, 'DAILY'],
+    ['Seasonal Sugar Cookies - Plate',                                     'Baked goods lunch',     5,  2, 'DAILY'],
+    ['Blondies - Slice and Plate',                                         'Baked goods lunch',    10,  2, 'MONDAY - THURSDAY'],
+    ['Rice Krispy Treat - Slice and Plate',                                'Baked goods lunch',    10,  2, 'THURSDAY - SUNDAY'],
+    ['Buckeye Brownie - Assemble, Slice, and Plate',                       'Baked goods lunch',    30,  2, 'SATURDAY + SUNDAY'],
+    // EVENING PREP
+    ['Almond Joy Syrup for FOH - Prep',                                    'Evening prep',         10,  0, '4 qt'],
+    ['Arugula Pesto - Prep',                                               'Evening prep',         10,  2, '1/2 - 4 qt'],
+    ['Avocado Mash for Radish Salads - Prep and Portion',                  'Evening prep',         15,  2, 'DAILY'],
+    ['Breakfast Sausage - Bake and Chop',                                  'Evening prep',         10,  2, '1/2 - 8 qt'],
+    ['Brine Chicken Breast - Prep',                                        'Evening prep',         10,  2, '1/2 - Metal Hotel Pan'],
+    ['Brined Chicken Breast - Bake',                                       'Evening prep',         10,  2, '1/2 - 12 qt'],
+    ['Brined Chicken Breast - Dice',                                       'Evening prep',         10,  2, null],
+    ['Brined Chicken Breast - Rub',                                        'Evening prep',         10,  2, null],
+    ['Brown Sugar Syrup for FOH - Prep',                                   'Evening prep',         10,  0, '4 qt'],
+    ['Brownie Crumble for FOH - Prep',                                     'Evening prep',         10,  0, '4 qt'],
+    ['Butternut Squash for Salads - Prep',                                 'Evening prep',         10,  2, '1/2 - 4 qt'],
+    ['Butternut Squash for Sandwiches - Prep',                             'Evening prep',         10,  2, '1/2 - 4 qt'],
+    ['Caesar Dressing - Portion',                                          'Evening prep',         10,  2, '1/2 - 8 qt'],
+    ['Caesar Dressing - Prep',                                             'Evening prep',         10,  2, '1/2 - 8 qt'],
+    ['Cheddar Cheese for Sandwiches - Slice and Prep',                     'Evening prep',         10,  2, '12 Portions'],
+    ['Chia Seed Pudding Base - Prep',                                      'Evening prep',         10,  2, '1/2 - 8 qt'],
+    ['Chicken Dry Rub - Prep',                                             'Evening prep',         10,  2, null],
+    ['Chop Chocolate for Chocolate Chip Cookie Dough - Prep for Bakers',   'Evening prep',         10,  2, '4 qt'],
+    ['Coconut Syrup for FOH - Prep',                                       'Evening prep',         10,  2, '4 qt'],
+    ['Cookie Crumble for FOH - Prep',                                      'Evening prep',         10,  2, '4 qt'],
+    ['Egg Bites Base- Prep',                                               'Evening prep',         10,  2, '1/4 - 12 qt'],
+    ['Egg White Bites Base - Prep',                                        'Evening prep',         10,  2, '1/4 - 12 qt'],
+    ['Farro - Cook and Prep',                                              'Evening prep',         10,  2, '1/2 - 8 qt'],
+    ['FroYo Base - Prep',                                                  'Evening prep',         20,  2, '1 - 22 qt'],
+    ['Garlic - Mince and Prep',                                            'Evening prep',         10,  2, null],
+    ['Garlic Confit - Prep',                                               'Evening prep',         10,  2, '1/4 - 6th Pan'],
+    ['Dijonnaise - Prep',                                                  'Evening prep',         10,  2, '1/2 - 4 qt'],
+    ['Honey Mustard - Portion',                                            'Evening prep',         10,  2, '15 Portions'],
+    ['Honey Mustard - Prep',                                               'Evening prep',         10,  2, '15 Portions'],
+    ['Honey Syrup for FOH - Prep',                                         'Evening prep',         10,  0, '4 qt'],
+    ['Hummus - Portion',                                                   'Evening prep',         10,  2, '4 qt'],
+    ['Hummus - Prep',                                                      'Evening prep',         10,  2, '1/2 - 4 qt'],
+    ['Kale - Wash and Prep',                                               'Evening prep',         30,  2, 'AS NEEDED'],
+    ['Kale Dressing - Prep',                                               'Evening prep',         10,  2, '1/2 - 8 qt'],
+    ['Lavender Syrup for FOH - Prep',                                      'Evening prep',         10,  0, '4 qt'],
+    ['Lemons - Zest and Prep for Bakers',                                  'Evening prep',         10,  2, '1/4 - 6th Pan'],
+    ['Lime Syrup for FOH - Prep',                                          'Evening prep',         10,  0, '4 qt'],
+    ['Magic Shell for FOH - Prep',                                         'Evening prep',         10,  2, '2 Full 32 oz Bottles'],
+    ['Maple Syrup for FOH - Prep',                                         'Evening prep',         10,  0, '4 qt'],
+    ['Maple Vinaigrette for Farro - Prep',                                 'Evening prep',         10,  2, '1/2 - 4 qt'],
+    ['Marinate Chicken Tenderloins - Prep',                                'Evening prep',         10,  2, '1/4 - 12 qt'],
+    ['Mocha Syrup for FOH - Prep',                                         'Evening prep',         10,  0, '4 qt'],
+    ['Pickled Red Onions - Prep',                                          'Evening prep',         10,  2, '1/2 - 4 qt'],
+    ['Pumpkin Seeds - Toast and Prep',                                     'Evening prep',         10,  2, '1/4 - 4 qt'],
+    ['Raspberry Syrup for FOH - Prep',                                     'Evening prep',         10,  0, '4 qt'],
+    ['Red Wine Vinaigrette Dressing - Portion',                            'Evening prep',         10,  2, '15 Portions'],
+    ['Red Wine Vinaigrette Dressing - Prep',                               'Evening prep',         10,  2, '15 Portions'],
+    ['Rice Wine Vinaigrette Dressing - Portion',                           'Evening prep',         10,  2, '15 Portions'],
+    ['Rice Wine Vinaigrette Dressing - Prep',                              'Evening prep',         10,  2, '15 Portions'],
+    ['Salmon Burgers - Prep',                                              'Evening prep',         15,  2, null],
+    ['Salmon Burgers - Assembly',                                          'Evening prep',         15,  2, null],
+    ['Snack Packs - Assemble and Plate',                                   'Evening prep',         30,  2, 'AS NEEDED'],
+    ['Spinach - Wilt and Prep',                                            'Evening prep',         10,  2, '1/2 - 8 qt'],
+    ['Strawberry Syrup for FOH - Prep',                                    'Evening prep',         10,  0, '4 qt'],
+    ['Toasted Almonds for FOH - Toast and Prep',                           'Evening prep',          0,  0, '2 qt'],
+    ['Tortilla Chips for Radish Salads - Prep and Portion',                'Evening prep',         15,  2, 'DAILY'],
+    ['Turkey for Salads - Chop and Prep',                                  'Evening prep',         10,  2, '1/2 - 8 qt'],
+    ['Turkey for Sandwiches - Slice and Prep',                             'Evening prep',         10,  2, '12 Portions'],
+    ['Vanilla Syrup for FOH - Prep',                                       'Evening prep',         10,  2, '4 qt'],
+    ['Whipped Goat Cheese - Prep',                                         'Evening prep',         10,  2, null],
+    ['White Rice for Chicken Teriyaki Meatball Dinners - Prep',            'Evening prep',         30,  2, 'DAILY'],
+  ];
+
+  // Build a lookup of existing items: name.toLowerCase() -> id
+  const lookup = {};
+  prepItems.forEach(item => { lookup[item.name.toLowerCase().trim()] = item.id; });
+
+  // First check if prep_when column exists by doing a test fetch
+  let hasPrepWhen = false;
+  try {
+    const testR = await supa('prep_items?select=prep_when&limit=1');
+    if (testR.ok) {
+      const testD = await testR.json();
+      hasPrepWhen = Array.isArray(testD); // if it errors, column doesn't exist
+    }
+  } catch(e) {}
+
+  if (!hasPrepWhen) {
+    console.warn('[UPDATE] prep_when column missing from prep_items. Run this SQL in Supabase:\nALTER TABLE prep_items ADD COLUMN IF NOT EXISTS prep_when text;');
+    showToast('Run SQL to add prep_when column — see console', 5000);
+    // Still update mins and unit_qty even without prep_when
+  }
+
+  let updated = 0, notFound = 0;
+  for (const [name, section, mins, unit_qty, prep_when] of DATA) {
+    const id = lookup[name.toLowerCase().trim()];
+    if (!id) { notFound++; continue; }
+    const patch = hasPrepWhen
+      ? { mins, unit_qty, prep_when: prep_when || null }
+      : { mins, unit_qty };
+    try {
+      await supa('prep_items?id=eq.' + id, { method: 'PATCH', body: JSON.stringify(patch) });
+      updated++;
+    } catch(e) { console.error('[UPDATE] failed for', name, e); }
+  }
+
+  console.log(`[UPDATE] Done. Updated: ${updated}, Not found: ${notFound}`);
+
+  // Mark done
+  await supa('settings', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates',
+    body: JSON.stringify({ key: 'prep_data_updated_v1', value: 'true' }),
+  });
+}
+
+// ============================================================
 // ENSURE CATERING TABLES
 // ============================================================
 async function ensureCateringTables() {
@@ -946,7 +1110,7 @@ async function deleteStaff(id) {
 // PREP ITEMS
 // ============================================================
 async function loadPrepItems() {
-  const r = await supa('prep_items?select=id,name,section,mins,unit_qty,sort_order&order=sort_order,id');
+  const r = await supa('prep_items?select=id,name,section,mins,unit_qty,sort_order,prep_when&order=sort_order,id');
   prepItems = await r.json();
   renderSettingsItems(settingsSectionIdx);
   buildSettingsSectionTabs();
@@ -984,6 +1148,7 @@ function renderSettingsItems(idx) {
       ondragleave="dragLeave(event)">
       <td><span class="drag-handle">⠿</span></td>
       <td><input type="text" value="${escHtml(item.name)}" onchange="updateItem(${item.id},'name',this.value)" style="min-width:200px;" /></td>
+      <td><input type="text" value="${escHtml(item.prep_when||'')}" onchange="updateItem(${item.id},'prep_when',this.value)" style="min-width:100px;" placeholder="e.g. DAILY" /></td>
       <td><input type="number" value="${item.mins||0}" onchange="updateItem(${item.id},'mins',this.value)" /></td>
       <td><input type="number" value="${item.unit_qty||0}" onchange="updateItem(${item.id},'unit_qty',this.value)" /></td>
       <td><button class="btn-icon" onclick="deleteItem(${item.id})">🗑</button></td>
@@ -997,8 +1162,7 @@ function renderSettingsItems(idx) {
 async function updateItem(id, field, val) {
   const item = prepItems.find(i=>i.id===id);
   if (!item) return;
-  item[field] = (field==='mins'||field==='unit_qty') ? (parseFloat(val)||0) : val;
-  await supa('prep_items?id=eq.'+id, { method:'PATCH', body: JSON.stringify({[field]: item[field]}) });
+  item[field] = (field==='mins'||field==='unit_qty') ? (parseFloat(val)||0) : val;  await supa('prep_items?id=eq.'+id, { method:'PATCH', body: JSON.stringify({[field]: item[field]}) });
   renderPrepList();
 }
 
@@ -1699,7 +1863,7 @@ function renderRegularSection(container, section, items) {
     tr.dataset.itemId = item.id;
     if (!hasQty) tr.classList.add('prep-row-noqty');
     tr.innerHTML = `
-      <td class="item-name">${escHtml(item.name)}</td>
+      <td class="item-name">${escHtml(item.name)}${item.prep_when ? `<div style="font-size:10px;color:var(--text-muted);font-weight:400;margin-top:1px;">${escHtml(item.prep_when)}</div>` : ''}</td>
       <td><input class="qty-input" type="number" min="0" value="${escHtml(qty)}" data-id="${item.id}" onchange="onQtyChange(this)" oninput="onQtyChange(this)" /></td>
       <td><select class="assign-select" data-id="${item.id}" onchange="onAssignChange(this)">
         <option value="">—</option>
