@@ -343,7 +343,7 @@
       <label>Date:</label>
       <select id="date-select" onchange="onDateChange()"></select>
       <label>Scheduled Hours:</label>
-      <input type="number" id="sched-hours" min="0" max="99" step="0.5" placeholder="hrs" onchange="saveSchedHours()" />
+      <input type="number" id="sched-hours" min="0" max="99" step="0.5" placeholder="hrs" onchange="saveSchedHours()" oninput="saveSchedHours()" />
       <label>Fixed BOH (min):</label>
       <input type="number" id="fixed-boh" min="0" max="999" step="5" placeholder="min" onchange="saveFixedBoh()" />
       <div class="spacer"></div>
@@ -2047,9 +2047,21 @@ async function upsertPrepDay(lock) {
 }
 
 async function saveSchedHours() {
-  schedHours = parseFloat(document.getElementById('sched-hours').value) || null;
+  const val = parseFloat(document.getElementById('sched-hours').value);
+  schedHours = isNaN(val) ? null : val;
   updateSummary();
-  triggerAutoSave();
+  // Persist immediately — don't wait for an assignment change to trigger auto-save
+  clearTimeout(saveDebounce);
+  setStatus('saving', '⏳ Saving...');
+  saveDebounce = setTimeout(async () => {
+    try {
+      await upsertPrepDay(false);
+      setStatus('saved', '✓ Saved');
+      setTimeout(() => setStatus('', ''), 2000);
+    } catch(e) {
+      setStatus('error', '⚠ Save error: ' + e.message);
+    }
+  }, 800);
 }
 
 // ============================================================
@@ -2165,8 +2177,7 @@ async function loadLaborData() {
 
     if (!Array.isArray(days) || days.length === 0) return;
 
-    const rows = days.filter(d => d.scheduled_hours != null && parseFloat(d.scheduled_hours) > 0);
-    console.log('[LABOR] rows with scheduled_hours:', rows);
+    const rows = days; // include all days, scheduled_hours may be null
     const recent = rows.slice(0, 30);
     if (recent.length === 0) return;
 
@@ -2191,7 +2202,7 @@ async function loadLaborData() {
 
     laborData = recent.map(day => {
       const date = day.prep_date;
-      const schedHrs = parseFloat(day.scheduled_hours);
+      const schedHrs = (day.scheduled_hours != null && day.scheduled_hours !== '') ? parseFloat(day.scheduled_hours) : null;
 
       // Build assignment map for this date
       const asgnMap = {};
@@ -2238,8 +2249,8 @@ async function loadLaborData() {
       });
 
       const estHours = parseFloat((totalMins / 60).toFixed(2));
-      const utilization = schedHrs > 0 ? Math.round((estHours / schedHrs) * 100) : null;
-      const delta = parseFloat((estHours - schedHrs).toFixed(2));
+      const utilization = (schedHrs != null && schedHrs > 0) ? Math.round((estHours / schedHrs) * 100) : null;
+      const delta = schedHrs != null ? parseFloat((estHours - schedHrs).toFixed(2)) : null;
 
       console.log('[LABOR] date:', date, 'totalMins:', totalMins, 'estHours:', estHours, 'schedHrs:', schedHrs);
       return { date, est_hours: estHours, sched_hours: schedHrs, utilization, delta };
@@ -2267,8 +2278,9 @@ function renderLaborTab() {
   const withUtil = laborData.filter(d => d.utilization != null);
   const avgUtil = withUtil.length ? Math.round(withUtil.reduce((s,d) => s + d.utilization, 0) / withUtil.length) : null;
   const avgEst = parseFloat((laborData.reduce((s,d) => s + d.est_hours, 0) / laborData.length).toFixed(1));
-  const avgSched = parseFloat((laborData.reduce((s,d) => s + d.sched_hours, 0) / laborData.length).toFixed(1));
-  const totalOver = laborData.filter(d => d.delta > 0).length;
+  const withSched = laborData.filter(d => d.sched_hours != null);
+  const avgSched = withSched.length ? parseFloat((withSched.reduce((s,d) => s + d.sched_hours, 0) / withSched.length).toFixed(1)) : null;
+  const totalOver = laborData.filter(d => d.delta != null && d.delta > 0).length;
 
   document.getElementById('labor-summary-cards').innerHTML = `
     <div class="labor-summary-card">
@@ -2280,7 +2292,7 @@ function renderLaborTab() {
       <div class="lbl">Avg Est. Hrs</div>
     </div>
     <div class="labor-summary-card">
-      <div class="val">${avgSched}</div>
+      <div class="val">${avgSched != null ? avgSched : '—'}</div>
       <div class="lbl">Avg Sched. Hrs</div>
     </div>
     <div class="labor-summary-card">
@@ -2294,12 +2306,13 @@ function renderLaborTab() {
   document.getElementById('labor-tbody').innerHTML = sorted.map(d => {
     const utilStr = d.utilization != null ? d.utilization + '%' : '—';
     const utilClass = d.utilization == null ? '' : d.utilization > 100 ? 'over' : 'under';
-    const deltaStr = (d.delta > 0 ? '+' : '') + d.delta.toFixed(1) + ' hrs';
-    const deltaClass = d.delta > 0 ? 'over' : 'under';
+    const schedStr = d.sched_hours != null ? d.sched_hours.toFixed(1) : '<span style="color:var(--text-muted);font-style:italic">not set</span>';
+    const deltaStr = d.delta != null ? (d.delta > 0 ? '+' : '') + d.delta.toFixed(1) + ' hrs' : '—';
+    const deltaClass = d.delta == null ? '' : d.delta > 0 ? 'over' : 'under';
     return `<tr>
       <td>${fmtDateDisplay(new Date(d.date + 'T12:00:00'))}</td>
       <td>${d.est_hours.toFixed(1)}</td>
-      <td>${d.sched_hours.toFixed(1)}</td>
+      <td>${schedStr}</td>
       <td class="utilization ${utilClass}">${utilStr}</td>
       <td class="${deltaClass}">${deltaStr}</td>
     </tr>`;
@@ -2337,8 +2350,8 @@ function drawLaborChart(data) {
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
 
-  // Y axis range
-  const allVals = data.flatMap(d => [d.est_hours, d.sched_hours]);
+  // Y axis range — only include non-null values
+  const allVals = data.flatMap(d => d.sched_hours != null ? [d.est_hours, d.sched_hours] : [d.est_hours]);
   const maxVal = Math.ceil(Math.max(...allVals) * 1.15) || 10;
   const minVal = 0;
 
@@ -2362,16 +2375,18 @@ function drawLaborChart(data) {
     ctx.fillText(v.toFixed(1), PAD.left - 6, y + 3);
   }
 
-  // Draw scheduled hours line (dashed grey)
-  ctx.beginPath();
+  // Draw scheduled hours line (dashed grey) — only where sched_hours is set
+  const schedPoints = data.map((d, i) => d.sched_hours != null ? { x: xScale(i), y: yScale(d.sched_hours) } : null);
   ctx.strokeStyle = '#b0a898';
   ctx.lineWidth = 1.5;
   ctx.setLineDash([4, 3]);
-  data.forEach((d, i) => {
-    const x = xScale(i), y = yScale(d.sched_hours);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  let inLine = false;
+  schedPoints.forEach((pt, i) => {
+    if (!pt) { inLine = false; return; }
+    if (!inLine) { ctx.beginPath(); ctx.moveTo(pt.x, pt.y); inLine = true; }
+    else { ctx.lineTo(pt.x, pt.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(pt.x, pt.y); }
   });
-  ctx.stroke();
+  if (inLine) ctx.stroke();
   ctx.setLineDash([]);
 
   // Draw est hours line (accent color)
@@ -2389,7 +2404,7 @@ function drawLaborChart(data) {
     const x = xScale(i), y = yScale(d.est_hours);
     ctx.beginPath();
     ctx.arc(x, y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = d.est_hours > d.sched_hours ? '#c8502a' : '#2e7d52';
+    ctx.fillStyle = (d.sched_hours != null && d.est_hours > d.sched_hours) ? '#c8502a' : '#2e7d52';
     ctx.fill();
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 1.5;
@@ -2436,9 +2451,9 @@ function downloadLaborCSV() {
   const rows = [...laborData].reverse().map(d => [
     d.date,
     d.est_hours.toFixed(2),
-    d.sched_hours.toFixed(2),
+    d.sched_hours != null ? d.sched_hours.toFixed(2) : '',
     d.utilization != null ? d.utilization : '',
-    d.delta.toFixed(2),
+    d.delta != null ? d.delta.toFixed(2) : '',
   ]);
   const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
