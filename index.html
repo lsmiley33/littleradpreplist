@@ -2470,26 +2470,20 @@ async function upsertPrepDay(lock) {
     ...(lock ? { saved_at: new Date().toISOString() } : {}),
   };
 
-  // Try PATCH first (update existing row)
-  const patchResp = await supa('prep_days?prep_date=eq.' + currentDate, {
-    method: 'PATCH',
-    prefer: 'return=minimal',
-    body: JSON.stringify(fields),
-  });
+  // First, check if a row already exists for this date
+  const checkResp = await supa('prep_days?prep_date=eq.' + currentDate + '&select=prep_date');
+  const checkData = checkResp.ok ? await checkResp.json() : [];
+  const exists = Array.isArray(checkData) && checkData.length > 0;
 
-  if (patchResp.ok) {
-    // Check if any row was actually updated (Content-Range header tells us)
-    const contentRange = patchResp.headers.get('Content-Range');
-    // Content-Range: */0 means 0 rows matched — need to INSERT instead
-    if (contentRange && contentRange.includes('/0')) {
-      await supa('prep_days', {
-        method: 'POST',
-        prefer: 'return=minimal',
-        body: JSON.stringify({ prep_date: currentDate, ...fields }),
-      });
-    }
+  if (exists) {
+    // Row exists — PATCH it
+    await supa('prep_days?prep_date=eq.' + currentDate, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: JSON.stringify(fields),
+    });
   } else {
-    // PATCH failed — try INSERT as fallback
+    // No row yet — INSERT
     await supa('prep_days', {
       method: 'POST',
       prefer: 'return=minimal',
