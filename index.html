@@ -137,6 +137,14 @@
   .archive-item-row { display:flex; gap:10px; padding:4px 0; font-size:13px; align-items:center; border-bottom:1px solid var(--border); }
   .archive-item-row:last-child { border-bottom:none; }
 
+  /* ARCHIVE STAFF SUMMARY */
+  .archive-staff-summary { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; padding-bottom:14px; border-bottom:2px solid var(--border); }
+  .archive-staff-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; min-width:110px; }
+  .archive-staff-card .staff-name { font-size:12px; font-weight:700; color:var(--text); margin-bottom:2px; }
+  .archive-staff-card .staff-hrs { font-size:20px; font-weight:700; font-family:var(--font); color:var(--accent); line-height:1; }
+  .archive-staff-card .staff-hrs-lbl { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-top:1px; }
+  .archive-staff-card .staff-items { font-size:11px; color:var(--text-muted); margin-top:3px; }
+
   /* SETTINGS TAB */
   .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   @media(max-width:680px) { .settings-grid { grid-template-columns:1fr; } }
@@ -2515,10 +2523,6 @@ async function saveSchedHours() {
 // ARCHIVE
 // ============================================================
 async function loadArchive() {
-  // Backfill: find any dates in prep_assignments that have no prep_days row,
-  // and create stub rows for them so they appear in the archive.
-  await backfillPrepDays();
-
   const r = await supa('prep_days?select=prep_date,scheduled_hours,saved_at&order=prep_date.desc&limit=60');
   const days = await r.json();
   const list = document.getElementById('archive-list');
@@ -2540,55 +2544,6 @@ async function loadArchive() {
   `).join('');
 }
 
-async function backfillPrepDays() {
-  try {
-    // Get all distinct dates from prep_assignments
-    const ar = await supa('prep_assignments?select=prep_date&order=prep_date.desc&limit=200');
-    if (!ar.ok) return;
-    const asgnRows = await ar.json();
-    if (!Array.isArray(asgnRows) || asgnRows.length === 0) return;
-
-    // Get unique dates from assignments
-    const asgnDates = [...new Set(asgnRows.map(r => r.prep_date))];
-
-    // Get all existing prep_days dates
-    const dr = await supa('prep_days?select=prep_date&limit=200');
-    if (!dr.ok) return;
-    const dayRows = await dr.json();
-    const existingDates = new Set(Array.isArray(dayRows) ? dayRows.map(r => r.prep_date) : []);
-
-    // Also check settings table for string_asgn_ keys (frozen/catering-only days)
-    const sr = await supa("settings?key=like.string_asgn_%&select=key&limit=200");
-    if (sr.ok) {
-      const strRows = await sr.json();
-      if (Array.isArray(strRows)) {
-        strRows.forEach(row => {
-          const date = row.key.replace('string_asgn_', '');
-          if (date.match(/^\d{4}-\d{2}-\d{2}$/)) asgnDates.push(date);
-        });
-      }
-    }
-
-    // Re-deduplicate after adding string asgn dates
-    const allDates = [...new Set(asgnDates)];
-    const missing = allDates.filter(d => !existingDates.has(d));
-    if (missing.length === 0) return;
-
-    console.log('[BACKFILL] Creating prep_days rows for:', missing);
-
-    // Insert stub rows for each missing date
-    const stubs = missing.map(prep_date => ({ prep_date, scheduled_hours: null, saved_at: null }));
-    await supa('prep_days', {
-      method: 'POST',
-      prefer: 'return=minimal',
-      body: JSON.stringify(stubs),
-    });
-    console.log(`[BACKFILL] Created ${missing.length} stub prep_days rows`);
-  } catch(e) {
-    console.error('[BACKFILL] error:', e);
-  }
-}
-
 async function toggleArchive(i) {
   const detail = document.getElementById('archive-detail-' + i);
   if (detail.classList.contains('open')) { detail.classList.remove('open'); return; }
@@ -2599,6 +2554,28 @@ async function toggleArchive(i) {
     if (!rows || rows.length === 0) {
       detail.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No items recorded.</div>';
     } else {
+      // Build staff time summary — only employees with assigned tasks
+      const staffTotals = {};
+      rows.forEach(row => {
+        if (!row.qty || row.qty <= 0 || !row.assigned_to) return;
+        const item = prepItems.find(i => i.id === row.item_id);
+        const mins = item ? calcItemMins(item, parseFloat(row.qty) || 0) : 0;
+        if (!staffTotals[row.assigned_to]) staffTotals[row.assigned_to] = { mins: 0, items: 0 };
+        staffTotals[row.assigned_to].mins += mins;
+        staffTotals[row.assigned_to].items += 1;
+      });
+      const staffEntries = Object.entries(staffTotals).sort((a, b) => b[1].mins - a[1].mins);
+      const summaryHtml = staffEntries.length > 0
+        ? `<div class="archive-staff-summary">` +
+          staffEntries.map(([name, data]) => `
+            <div class="archive-staff-card">
+              <div class="staff-name">${escHtml(name)}</div>
+              <div class="staff-hrs">${(data.mins / 60).toFixed(1)}</div>
+              <div class="staff-hrs-lbl">Est. Hours</div>
+              <div class="staff-items">${data.items} item${data.items !== 1 ? 's' : ''} · ${data.mins} min</div>
+            </div>`).join('') + `</div>`
+        : '';
+      // Section-by-section item list
       const bySection = {};
       rows.forEach(row => {
         if (!row.qty || row.qty <= 0) return;
@@ -2607,7 +2584,7 @@ async function toggleArchive(i) {
         if (!bySection[section]) bySection[section] = [];
         bySection[section].push({ ...row, itemName: item ? item.name : 'Item #'+row.item_id });
       });
-      detail.innerHTML = Object.entries(bySection).map(([sec, items]) => `
+      detail.innerHTML = summaryHtml + Object.entries(bySection).map(([sec, items]) => `
         <div class="archive-section-name">${sec}</div>
         ${items.map(row => `
           <div class="archive-item-row">
