@@ -376,6 +376,7 @@
     <div class="summary-divider"></div>
     <div class="summary-item" id="sum-delta-wrap"><div class="val" id="sum-delta">—</div><div class="lbl">Over/Under</div></div>
   </div>
+  <div id="staff-breakdown" class="no-print" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
   <div id="sections-container"></div>
 </div>
 
@@ -2295,6 +2296,16 @@ function updateSectionCount(section) {
 
 function updateSummary() {
   let totalItems = 0, totalAssigned = 0, totalMins = fixedBoh || 0;
+  const staffTotals = {}; // name -> { mins, items }
+
+  function tallyAsgn(asgn, mins) {
+    if (!asgn || mins == null) return;
+    if (asgn.assigned_to) {
+      if (!staffTotals[asgn.assigned_to]) staffTotals[asgn.assigned_to] = { mins: 0, items: 0 };
+      staffTotals[asgn.assigned_to].mins += mins;
+      staffTotals[asgn.assigned_to].items += 1;
+    }
+  }
 
   prepItems.forEach(item => {
     const asgn = assignments[String(item.id)];
@@ -2303,7 +2314,9 @@ function updateSummary() {
     if (qty > 0) {
       totalItems++;
       if (asgn.assigned_to) totalAssigned++;
-      totalMins += calcItemMins(item, qty);
+      const mins = calcItemMins(item, qty);
+      totalMins += mins;
+      tallyAsgn(asgn, mins);
     }
   });
 
@@ -2318,7 +2331,9 @@ function updateSummary() {
     if (qty > 0) {
       totalItems++;
       if (asgn.assigned_to) totalAssigned++;
-      totalMins += dbItem ? calcItemMins(dbItem, qty) : fi.mins;
+      const mins = dbItem ? calcItemMins(dbItem, qty) : fi.mins;
+      totalMins += mins;
+      tallyAsgn(asgn, mins);
     }
   });
 
@@ -2333,7 +2348,9 @@ function updateSummary() {
       totalItems++;
       if (asgn.assigned_to) totalAssigned++;
       const baseMins = type === 'prep' ? (catItem.prep_time||0) : (catItem.assemble_time||5);
-      totalMins += qty > 1 ? Math.round(baseMins * 1.3) : baseMins;
+      const mins = qty > 1 ? Math.round(baseMins * 1.3) : baseMins;
+      totalMins += mins;
+      tallyAsgn(asgn, mins);
     }
   });
 
@@ -2353,6 +2370,24 @@ function updateSummary() {
   } else {
     deltaEl.textContent = '—';
     deltaWrap.className = 'summary-item';
+  }
+
+  // Render per-person breakdown cards
+  const breakdown = document.getElementById('staff-breakdown');
+  const staffEntries = Object.entries(staffTotals).sort((a, b) => b[1].mins - a[1].mins);
+  if (staffEntries.length > 0) {
+    breakdown.style.display = 'flex';
+    breakdown.innerHTML = staffEntries.map(([name, data]) => `
+      <div class="archive-staff-card">
+        <div class="staff-name">${escHtml(name)}</div>
+        <div class="staff-hrs">${(data.mins / 60).toFixed(1)}</div>
+        <div class="staff-hrs-lbl">Est. Hours</div>
+        <div class="staff-items">${data.items} item${data.items !== 1 ? 's' : ''} · ${data.mins} min</div>
+      </div>
+    `).join('');
+  } else {
+    breakdown.style.display = 'none';
+    breakdown.innerHTML = '';
   }
 }
 
