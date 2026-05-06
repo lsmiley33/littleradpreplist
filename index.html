@@ -2515,6 +2515,10 @@ async function saveSchedHours() {
 // ARCHIVE
 // ============================================================
 async function loadArchive() {
+  // Backfill: find any dates in prep_assignments that have no prep_days row,
+  // and create stub rows for them so they appear in the archive.
+  await backfillPrepDays();
+
   const r = await supa('prep_days?select=prep_date,scheduled_hours,saved_at&order=prep_date.desc&limit=60');
   const days = await r.json();
   const list = document.getElementById('archive-list');
@@ -2534,6 +2538,55 @@ async function loadArchive() {
       <div class="archive-detail" id="archive-detail-${i}" data-date="${day.prep_date}"></div>
     </div>
   `).join('');
+}
+
+async function backfillPrepDays() {
+  try {
+    // Get all distinct dates from prep_assignments
+    const ar = await supa('prep_assignments?select=prep_date&order=prep_date.desc&limit=200');
+    if (!ar.ok) return;
+    const asgnRows = await ar.json();
+    if (!Array.isArray(asgnRows) || asgnRows.length === 0) return;
+
+    // Get unique dates from assignments
+    const asgnDates = [...new Set(asgnRows.map(r => r.prep_date))];
+
+    // Get all existing prep_days dates
+    const dr = await supa('prep_days?select=prep_date&limit=200');
+    if (!dr.ok) return;
+    const dayRows = await dr.json();
+    const existingDates = new Set(Array.isArray(dayRows) ? dayRows.map(r => r.prep_date) : []);
+
+    // Also check settings table for string_asgn_ keys (frozen/catering-only days)
+    const sr = await supa("settings?key=like.string_asgn_%&select=key&limit=200");
+    if (sr.ok) {
+      const strRows = await sr.json();
+      if (Array.isArray(strRows)) {
+        strRows.forEach(row => {
+          const date = row.key.replace('string_asgn_', '');
+          if (date.match(/^\d{4}-\d{2}-\d{2}$/)) asgnDates.push(date);
+        });
+      }
+    }
+
+    // Re-deduplicate after adding string asgn dates
+    const allDates = [...new Set(asgnDates)];
+    const missing = allDates.filter(d => !existingDates.has(d));
+    if (missing.length === 0) return;
+
+    console.log('[BACKFILL] Creating prep_days rows for:', missing);
+
+    // Insert stub rows for each missing date
+    const stubs = missing.map(prep_date => ({ prep_date, scheduled_hours: null, saved_at: null }));
+    await supa('prep_days', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify(stubs),
+    });
+    console.log(`[BACKFILL] Created ${missing.length} stub prep_days rows`);
+  } catch(e) {
+    console.error('[BACKFILL] error:', e);
+  }
 }
 
 async function toggleArchive(i) {
